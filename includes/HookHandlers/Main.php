@@ -109,7 +109,7 @@ class Main implements
 					'LanguageCode',
 					'LocalDatabases',
 					'ManageWikiSettings',
-					'MirahezeMagicMemcachedServers',
+					'WikiOasisMagicMemcachedServers',
 					'Script',
 				],
 				$mainConfig
