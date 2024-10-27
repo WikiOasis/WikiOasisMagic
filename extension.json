@@ -115,7 +115,7 @@
 		}
 	},
 	"config": {
-		"MirahezeMagicMemcachedServers": {
+		"WikiOasisMagicMemcachedServers": {
 			"description": "Array. Memcached servers to use for clearing memcached keys when a wiki is deleted or renamed.",
 			"value": []
 		}

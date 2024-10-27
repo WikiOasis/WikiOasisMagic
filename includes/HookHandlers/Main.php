@@ -455,7 +455,7 @@ class Main implements
 
 	/** Remove memcached keys */
 	private function removeMemcachedKey( string $key ) {
-		$memcachedServers = $this->options->get( 'MirahezeMagicMemcachedServers' );
+		$memcachedServers = $this->options->get( 'WikiOasisMemcachedServers' );
 
 		try {
 			foreach ( $memcachedServers as $memcachedServer ) {
