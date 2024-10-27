@@ -12,11 +12,9 @@ use MediaWiki\Extension\AbuseFilter\AbuseFilterServices;
 use MediaWiki\Extension\AbuseFilter\Hooks\AbuseFilterShouldFilterActionHook;
 use MediaWiki\Extension\AbuseFilter\Variables\VariableHolder;
 use MediaWiki\Extension\CentralAuth\User\CentralAuthUser;
-use MediaWiki\Hook\BlockIpCompleteHook;
 use MediaWiki\Hook\ContributionsToolLinksHook;
 use MediaWiki\Hook\GetLocalURL__InternalHook;
 use MediaWiki\Hook\MimeMagicInitHook;
-use MediaWiki\Hook\RecentChange_saveHook;
 use MediaWiki\Hook\SiteNoticeAfterHook;
 use MediaWiki\Hook\SkinAddFooterLinksHook;
 use MediaWiki\Html\Html;
@@ -25,7 +23,6 @@ use MediaWiki\Linker\Linker;
 use MediaWiki\MainConfigNames;
 use MediaWiki\MediaWikiServices;
 use MediaWiki\Permissions\Hook\TitleReadWhitelistHook;
-use MediaWiki\Permissions\Hook\UserGetRightsRemoveHook;
 use MediaWiki\Shell\Shell;
 use MediaWiki\SpecialPage\SpecialPage;
 use MediaWiki\Title\Title;
@@ -46,18 +43,15 @@ use Wikimedia\Rdbms\ILBFactory;
 
 class Main implements
 	AbuseFilterShouldFilterActionHook,
-	BlockIpCompleteHook,
 	ContributionsToolLinksHook,
 	CreateWikiStatePrivateHook,
 	CreateWikiTablesHook,
 	GetLocalURL__InternalHook,
 	MessageCacheFetchOverridesHook,
 	MimeMagicInitHook,
-	RecentChange_saveHook,
 	SiteNoticeAfterHook,
 	SkinAddFooterLinksHook,
-	TitleReadWhitelistHook,
-	UserGetRightsRemoveHook
+	TitleReadWhitelistHook
 {
 
 	/** @var ServiceOptions */
@@ -115,10 +109,7 @@ class Main implements
 					'LanguageCode',
 					'LocalDatabases',
 					'ManageWikiSettings',
-					'MirahezeMagicAccessIdsMap',
 					'MirahezeMagicMemcachedServers',
-					'MirahezeReportsBlockAlertKeywords',
-					'MirahezeReportsWriteKey',
 					'Script',
 				],
 				$mainConfig
