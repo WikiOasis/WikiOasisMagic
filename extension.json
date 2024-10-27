@@ -1,0 +1,135 @@
+{
+	"name": "WikiOasisMagic",
+	"author": [
+		"Agent Isai",
+		"John Lewis",
+		"Labster",
+		"MacFan4000",
+		"Reception123",
+		"Revi",
+		"Paladox",
+		"Southparkfan",
+		"Universal Omega"
+	],
+	"url": "https://github.com/WikiOasis/WikiOasisMagic",
+	"descriptionmsg": "wikioasismagic-description",
+	"namemsg": "wikioasismagic-extensionname",
+	"license-name": "GPL-3.0-or-later",
+	"type": "other",
+	"requires": {
+		"MediaWiki": ">= 1.42.0",
+		"platform": {
+			"php": ">= 8.0"
+		}
+	},
+	"MessagesDirs": {
+		"WikiOasisMagic": [
+			"i18n/overrides",
+			"i18n/wikioasis"
+		]
+	},
+	"AutoloadNamespaces": {
+		"WikiOasis\\WikiOasisMagic\\": "includes/"
+	},
+	"LogActionsHandlers": {
+		"vanishuser/*": "LogFormatter"
+	},
+	"LogHeaders": {
+		"vanishuser": "vanishuser-log-header"
+	},
+	"LogNames": {
+		"vanishuser": "vanishuser-log-name"
+	},
+	"LogTypes": [
+		"vanishuser"
+	],
+	"SpecialPages": {
+		"VanishUser": {
+			"class": "WikiOasis\\WikiOasisMagic\\Specials\\SpecialVanishUser",
+			"services": [
+				"JobQueueGroupFactory",
+				"UserFactory"
+			],
+			"optional_services": [
+				"CentralAuth.CentralAuthAntiSpoofManager",
+				"CentralAuth.CentralAuthDatabaseManager",
+				"CentralAuth.GlobalRenameUserValidator"
+			]
+		}
+	},
+	"Hooks": {
+		"AbuseFilterShouldFilterAction": {
+			"handler": "Main"
+		},
+		"ContributionsToolLinks": {
+			"handler": "Main"
+		},
+		"CreateWikiStatePrivate": {
+			"handler": "Main"
+		},
+		"CreateWikiTables": {
+			"handler": "Main"
+		},
+		"GetLocalURL::Internal": {
+			"handler": "Main"
+		},
+		"GlobalUserPageWikis": {
+			"handler": "Main"
+		},
+		"ImportDumpJobAfterImport": {
+			"handler": "Main"
+		},
+		"ImportDumpJobGetFile": {
+			"handler": "Main"
+		},
+		"MessageCacheFetchOverrides": {
+			"handler": "Main"
+		},
+		"MimeMagicInit": {
+			"handler": "Main"
+		},
+		"RecentChange_save": {
+			"handler": "Main"
+		},
+		"RequestWikiFormDescriptorModify": {
+			"handler": "RequestWiki"
+		},
+		"RequestWikiQueueFormDescriptorModify": {
+			"handler": "RequestWiki"
+		},
+		"SiteNoticeAfter": {
+			"handler": "Main"
+		},
+		"SkinAddFooterLinks": {
+			"handler": "Main"
+		},
+		"TitleReadWhitelist": {
+			"handler": "Main"
+		}
+	},
+	"HookHandlers": {
+		"Main": {
+			"class": "WikiOasis\\WikiOasisMagic\\HookHandlers\\Main",
+			"factory": "WikiOasis\\WikiOasisMagic\\HookHandlers\\Main::factory",
+			"services": [
+				"MainConfig",
+				"CommentStore",
+				"DBLoadBalancerFactory",
+				"HttpRequestFactory"
+			]
+		},
+		"RequestWiki": {
+			"class": "WikiOasis\\WikiOasisMagic\\HookHandlers\\RequestWiki"
+		}
+	},
+	"config": {
+		"MirahezeMagicMemcachedServers": {
+			"description": "Array. Memcached servers to use for clearing memcached keys when a wiki is deleted or renamed.",
+			"value": []
+		}
+	},
+	"ConfigRegistry": {
+		"WikiOasisMagic": "MediaWiki\\Config\\GlobalVarConfig::newInstance"
+	},
+	"manifest_version": 2
+}
