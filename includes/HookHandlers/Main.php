@@ -35,8 +35,6 @@ use Memcached;
 use MessageCache;
 use Miraheze\CreateWiki\Hooks\CreateWikiStatePrivateHook;
 use Miraheze\CreateWiki\Hooks\CreateWikiTablesHook;
-use Miraheze\CreateWiki\Hooks\CreateWikiWritePersistentModelHook;
-use Miraheze\ImportDump\Hooks\ImportDumpJobGetFileHook;
 use Miraheze\ManageWiki\Helpers\ManageWikiExtensions;
 use Miraheze\ManageWiki\Helpers\ManageWikiSettings;
 use Redis;
@@ -53,7 +51,6 @@ class Main implements
 	CreateWikiStatePrivateHook,
 	CreateWikiTablesHook,
 	GetLocalURL__InternalHook,
-	ImportDumpJobGetFileHook,
 	MessageCacheFetchOverridesHook,
 	MimeMagicInitHook,
 	RecentChange_saveHook,
