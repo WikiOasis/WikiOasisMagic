@@ -1,6 +1,6 @@
 <?php
 
-namespace Miraheze\MirahezeMagic\HookHandlers;
+namespace WikiOasis\WikiOasisMagic\HookHandlers;
 
 use MediaWiki\Cache\Hook\MessageCacheFetchOverridesHook;
 use MediaWiki\CommentStore\CommentStore;
