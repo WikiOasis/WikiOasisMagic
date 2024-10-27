@@ -77,9 +77,6 @@
 		"GlobalUserPageWikis": {
 			"handler": "Main"
 		},
-		"ImportDumpJobGetFile": {
-			"handler": "Main"
-		},
 		"MessageCacheFetchOverrides": {
 			"handler": "Main"
 		},
