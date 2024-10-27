@@ -77,9 +77,6 @@
 		"GlobalUserPageWikis": {
 			"handler": "Main"
 		},
-		"ImportDumpJobAfterImport": {
-			"handler": "Main"
-		},
 		"ImportDumpJobGetFile": {
 			"handler": "Main"
 		},
