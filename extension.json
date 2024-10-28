@@ -25,7 +25,6 @@
 	},
 	"MessagesDirs": {
 		"WikiOasisMagic": [
-			"i18n/overrides",
 			"i18n/wikioasis"
 		]
 	},
