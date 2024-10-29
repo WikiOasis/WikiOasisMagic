@@ -9,6 +9,8 @@
 			"Waki285"
 		]
 	},
+    "wikioasismagic-extensionname": "WikiOasisMagic",
+    "wikioasismagic-description": "WikiOasis dedicated extension",
 	"extensions-antispam": "Spam prevention",
 	"extensions-api": "API",
 	"extensions-editors": "Editors",
