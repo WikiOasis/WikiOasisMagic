@@ -181,7 +181,7 @@ class Main implements
 	}
 
     public function onImportDumpJobGetFile( &$filePath, $importDumpRequestManager ): void {
-        $originalFilePath = $importDumpRequestManager->getFilePath();
+        $originalFilePath = $importDumpRequestManager->getSplitedFilePath();
 
         if ( $originalFilePath === null ) {
             return;
