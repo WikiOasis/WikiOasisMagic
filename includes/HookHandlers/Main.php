@@ -191,9 +191,11 @@ class Main implements
         wfDebugLog( 'WikiOasisMagic', "Importing dump from {$originalFilePath} to {$filePath}" );
 
         // copy $originalFilePath to $filePath file
-        if (!copy($originalFilePath, $filePath)) {
+        if (!copy('/var/www/mediawiki/images/metawiki/'.$originalFilePath, $filePath)) {
             throw new RuntimeException("Failed to copy $originalFilePath to $filePath");
         }
+
+        wfDebugLog( 'WikiOasisMagic', "Importing dump from {$originalFilePath} to {$filePath} done" );
 	}
 
 	/**

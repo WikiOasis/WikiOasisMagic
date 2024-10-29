@@ -97,5 +97,6 @@
 	"settings-seo": "SEO",
 	"settings-socialtools": "Social tools",
 	"settings-styling": "Styling",
-	"settings-wikibase": "Wikibase"
+	"settings-wikibase": "Wikibase",
+    "specialpages-group-wikimanage": "Wiki management"
 }
