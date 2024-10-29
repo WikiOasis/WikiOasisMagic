@@ -31,32 +31,6 @@
 	"AutoloadNamespaces": {
 		"WikiOasis\\WikiOasisMagic\\": "includes/"
 	},
-	"LogActionsHandlers": {
-		"vanishuser/*": "LogFormatter"
-	},
-	"LogHeaders": {
-		"vanishuser": "vanishuser-log-header"
-	},
-	"LogNames": {
-		"vanishuser": "vanishuser-log-name"
-	},
-	"LogTypes": [
-		"vanishuser"
-	],
-	"SpecialPages": {
-		"VanishUser": {
-			"class": "WikiOasis\\WikiOasisMagic\\Specials\\SpecialVanishUser",
-			"services": [
-				"JobQueueGroupFactory",
-				"UserFactory"
-			],
-			"optional_services": [
-				"CentralAuth.CentralAuthAntiSpoofManager",
-				"CentralAuth.CentralAuthDatabaseManager",
-				"CentralAuth.GlobalRenameUserValidator"
-			]
-		}
-	},
 	"Hooks": {
 		"AbuseFilterShouldFilterAction": {
 			"handler": "Main"
