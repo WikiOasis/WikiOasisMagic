@@ -85,12 +85,6 @@
 		"MimeMagicInit": {
 			"handler": "Main"
 		},
-		"RequestWikiFormDescriptorModify": {
-			"handler": "RequestWiki"
-		},
-		"RequestWikiQueueFormDescriptorModify": {
-			"handler": "RequestWiki"
-		},
 		"SiteNoticeAfter": {
 			"handler": "Main"
 		},
