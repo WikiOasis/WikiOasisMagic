@@ -181,7 +181,8 @@ class Main implements
 	}
 
     public function onImportDumpJobGetFile( &$filePath, $importDumpRequestManager ): void {
-        $originalFilePath = $importDumpRequestManager->getSplitedFilePath();
+        wfDebugLog( 'WikiOasisMagic', "Importing dump from {$filePath}" );
+        $originalFilePath = $importDumpRequestManager->getSplitFilePath();
 
         if ( $originalFilePath === null ) {
             return;
