@@ -111,9 +111,6 @@
 				"DBLoadBalancerFactory",
 				"HttpRequestFactory"
 			]
-		},
-		"RequestWiki": {
-			"class": "WikiOasis\\WikiOasisMagic\\HookHandlers\\RequestWiki"
 		}
 	},
 	"config": {
