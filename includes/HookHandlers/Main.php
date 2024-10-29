@@ -34,6 +34,7 @@ use Miraheze\CreateWiki\Hooks\CreateWikiStatePrivateHook;
 use Miraheze\CreateWiki\Hooks\CreateWikiTablesHook;
 use Miraheze\ManageWiki\Helpers\ManageWikiExtensions;
 use Miraheze\ManageWiki\Helpers\ManageWikiSettings;
+use Miraheze\ImportDump\Hooks\ImportDumpJobGetFileHook;
 use Redis;
 use Skin;
 use Throwable;
@@ -47,6 +48,7 @@ class Main implements
 	CreateWikiStatePrivateHook,
 	CreateWikiTablesHook,
 	GetLocalURL__InternalHook,
+    ImportDumpJobGetFileHook,
 	MessageCacheFetchOverridesHook,
 	MimeMagicInitHook,
 	SiteNoticeAfterHook,
@@ -178,6 +180,21 @@ class Main implements
 		$cTables['localuser'] = 'lu_wiki';
 	}
 
+    public function onImportDumpJobGetFile( &$filePath, $importDumpRequestManager ): void {
+        $originalFilePath = $importDumpRequestManager->getFilePath();
+
+        if ( $originalFilePath === null ) {
+            return;
+        }
+
+        wfDebugLog( 'WikiOasisMagic', "Importing dump from {$originalFilePath} to {$filePath}" );
+
+        // copy $originalFilePath to $filePath file
+        if (!copy($originalFilePath, $filePath)) {
+            throw new RuntimeException("Failed to copy $originalFilePath to $filePath");
+        }
+	}
+
 	/**
 	 * From WikimediaMessages
 	 * When core requests certain messages, change the key to a Miraheze version.
@@ -187,7 +204,7 @@ class Main implements
 	 */
 	public function onMessageCacheFetchOverrides( array &$keys ): void {
 		static $keysToOverride = [
-			'centralauth-groupname',
+			/*'centralauth-groupname',
 			'centralauth-login-error-locked',
 			'createwiki-close-email-body',
 			'createwiki-close-email-sender',
@@ -206,7 +223,7 @@ class Main implements
 			'dberr-problems',
 			'globalblocking-ipblocked-range',
 			'globalblocking-ipblocked-xff',
-			'globalblocking-ipblocked',
+			'globalblocking-ipblocked',*/
 			'grouppage-autoconfirmed',
 			'grouppage-automoderated',
 			'grouppage-autoreview',
@@ -227,7 +244,7 @@ class Main implements
 			'grouppage-sysop',
 			'grouppage-upwizcampeditors',
 			'grouppage-user',
-			'importdump-help-reason',
+			/*'importdump-help-reason',
 			'importdump-help-target',
 			'importdump-help-upload-file',
 			'importdump-import-failed-comment',
@@ -249,13 +266,13 @@ class Main implements
 			'snapwikiskin',
 			'uploadtext',
 			'webauthn-module-description',
-			'wikibase-sitelinks-miraheze',
+			'wikibase-sitelinks-miraheze',*/
 		];
 
 		$languageCode = $this->options->get( MainConfigNames::LanguageCode );
 
 		$transformationCallback = static function ( string $key, MessageCache $cache ) use ( $languageCode ): string {
-			$transformedKey = "miraheze-$key";
+			$transformedKey = "wikioasis-$key";
 
 			// MessageCache uses ucfirst if ord( key ) is < 128, which is true of all
 			// of the above.  Revisit if non-ASCII keys are used.
