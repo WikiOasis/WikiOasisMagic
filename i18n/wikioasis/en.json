@@ -20,6 +20,8 @@
 	"extensions-specialpages": "Special pages",
 	"extensions-variable": "Variables",
 	"grant-usedatadumpapi": "Create, view, and delete dumps",
+	"group-abusefilter-member": "{{GENDER:$1|abusefilter maintainer}}",
+	"group-abusefilter": "Abusefilter maintainers",
 	"group-autopatrolled-member": "{{GENDER:$1|autopatrolled}}",
 	"group-autopatrolled": "Autopatrolled users",
 	"group-confirmed-member": "{{GENDER:$1|confirmed user}}",
