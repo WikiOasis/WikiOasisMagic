@@ -5,9 +5,7 @@ namespace WikiOasis\WikiOasisMagic\HookHandlers;
 use MediaWiki\Cache\Hook\MessageCacheFetchOverridesHook;
 use MediaWiki\CommentStore\CommentStore;
 use MediaWiki\Config\Config;
-use MediaWiki\Config\GlobalVarConfig;
 use MediaWiki\Config\ServiceOptions;
-use MediaWiki\Context\RequestContext;
 use MediaWiki\Extension\AbuseFilter\AbuseFilterServices;
 use MediaWiki\Extension\AbuseFilter\Hooks\AbuseFilterShouldFilterActionHook;
 use MediaWiki\Extension\AbuseFilter\Variables\VariableHolder;
@@ -21,25 +19,22 @@ use MediaWiki\Html\Html;
 use MediaWiki\Http\HttpRequestFactory;
 use MediaWiki\Linker\Linker;
 use MediaWiki\MainConfigNames;
-use MediaWiki\MediaWikiServices;
 use MediaWiki\Permissions\Hook\TitleReadWhitelistHook;
 use MediaWiki\Shell\Shell;
 use MediaWiki\SpecialPage\SpecialPage;
 use MediaWiki\Title\Title;
 use MediaWiki\User\User;
-use MediaWiki\WikiMap\WikiMap;
 use Memcached;
 use MessageCache;
 use Miraheze\CreateWiki\Hooks\CreateWikiStatePrivateHook;
 use Miraheze\CreateWiki\Hooks\CreateWikiTablesHook;
 use Miraheze\ManageWiki\Helpers\ManageWikiExtensions;
-use Miraheze\ManageWiki\Helpers\ManageWikiSettings;
 use Miraheze\ImportDump\Hooks\ImportDumpJobGetFileHook;
+use Miraheze\ImportDump\Hooks\ImportDumpJobAfterImportHook;
 use Redis;
 use Skin;
 use Throwable;
 use Wikimedia\IPUtils;
-use Wikimedia\Rdbms\DBConnRef;
 use Wikimedia\Rdbms\ILBFactory;
 
 class Main implements
@@ -49,6 +44,7 @@ class Main implements
 	CreateWikiTablesHook,
 	GetLocalURL__InternalHook,
     ImportDumpJobGetFileHook,
+    ImportDumpJobAfterImportHook,
 	MessageCacheFetchOverridesHook,
 	MimeMagicInitHook,
 	SiteNoticeAfterHook,
@@ -196,6 +192,14 @@ class Main implements
         }
 
         wfDebugLog( 'WikiOasisMagic', "Importing dump from {$originalFilePath} to {$filePath} done" );
+	}
+
+    public function onImportDumpJobAfterImport( $filePath, $importDumpRequestManager ): void {
+		$limits = [ 'memory' => 0, 'filesize' => 0, 'time' => 0, 'walltime' => 0 ];
+		Shell::command( '/bin/rm', $filePath )
+			->limits( $limits )
+			->disableSandbox()
+			->execute();
 	}
 
 	/**
