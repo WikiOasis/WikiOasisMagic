@@ -100,5 +100,13 @@
 	"settings-socialtools": "Social tools",
 	"settings-styling": "Styling",
 	"settings-wikibase": "Wikibase",
-    "specialpages-group-wikimanage": "Wiki management"
+    "specialpages-group-wikimanage": "Wiki management",
+	"shortdescription": "ShortDescription",
+	"shortdescription-desc": "Allows you to add short descriptions to wiki pages",
+	"embedvideo-desc": "Allows you to embed videos into your pages",
+	"tiff-desc": "Allows you to upload and display tiff files",
+	"mediaspoiler-desc": "Allows you to add spoilers to media files on pages",
+	"pdf-desc": "An easy way to upload and view PDFs on your wiki",
+	"simplebatchupload-name": "SimpleBatchUpload",
+	"simplebatchupload-desc": "A simple way to batch upload files"
 }
