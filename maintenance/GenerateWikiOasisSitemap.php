@@ -90,9 +90,6 @@ class GenerateWikiOasisSitemap extends Maintenance {
             $generateSitemap->execute();
     
             foreach ( glob( $tempDir . "/sitemap-*{$dbname}*" ) as $sitemapFile ) {
-                if ( basename( $sitemapFile ) === "sitemap-index-{$dbname}.xml" ) {
-                    continue;
-                }
                 $destination = $sitemapDir . "/" . basename( $sitemapFile );
                 if ( rename( $sitemapFile, $destination ) ) {
                     $this->output( "Moved file " . basename( $sitemapFile ) . " to sitemap directory.\n" );
