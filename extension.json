@@ -29,7 +29,8 @@
 		]
 	},
 	"AutoloadNamespaces": {
-		"WikiOasis\\WikiOasisMagic\\": "includes/"
+		"WikiOasis\\WikiOasisMagic\\": "includes/",
+    "WikiOasis\\WikiOasisMagic\\Maintenance\\": "maintenance/"
 	},
 	"Hooks": {
 		"AbuseFilterShouldFilterAction": {
