@@ -27,6 +27,7 @@ use MediaWiki\User\User;
 use Memcached;
 use MessageCache;
 use Miraheze\CreateWiki\Hooks\CreateWikiStatePrivateHook;
+use Miraheze\CreateWiki\Hooks\CreateWikiStatePublicHook;
 use Miraheze\CreateWiki\Hooks\CreateWikiTablesHook;
 use Miraheze\ManageWiki\Helpers\ManageWikiExtensions;
 use Miraheze\ImportDump\Hooks\ImportDumpJobGetFileHook;
@@ -41,6 +42,7 @@ class Main implements
     AbuseFilterShouldFilterActionHook,
     ContributionsToolLinksHook,
     CreateWikiStatePrivateHook,
+    CreateWikiStatePublicHook,
     CreateWikiTablesHook,
     GetLocalURL__InternalHook,
     ImportDumpJobGetFileHook,
@@ -156,6 +158,54 @@ class Main implements
         } else {
             wfDebugLog('WikiOasisMagic', "Directory {$dir} does not exist.");
         }
+
+        // move images
+        $imagesDir = "/var/www/mediawiki/images/{$dbname}";
+        $dest = "/var/www/images/{$dbname}";
+        if (is_dir($imagesDir)) {
+            $this->moveDirectory($imagesDir, $dest);
+            wfDebugLog("WikiOasisMagic", "Directory {$imagesDir} has been moved to {$dest}.");
+        } else {
+            wfDebugLog("WikiOasisMagic", "Directory {$imagesDir} does not exist.");
+        }
+    }
+
+    public function onCreateWikiStatePublic(string $dbname): void
+    {
+        $dir = "/var/www/images/{$dbname}";
+        $dest = "/var/www/mediawiki/images/{$dbname}";
+        if (is_dir($dir)) {
+            $this->moveDirectory($dir, $dest);
+            wfDebugLog("WikiOasisMagic", "Directory {$dir} has been moved to {$dest}.");
+        } else {
+            wfDebugLog("WikiOasisMagic", "Directory {$dir} does not exist.");
+        }
+
+    }
+
+    private function moveDirectory(string $src, string $dest): void
+    {
+        if (!file_exists($src)) {
+            return;
+        }
+
+        if (!is_dir($src) || is_link($src)) {
+            rename($src, $dest);
+            return;
+        }
+
+        if (!is_dir($dest)) {
+            mkdir($dest, 0755, true);
+        }
+
+        foreach (scandir($src) as $item) {
+            if ($item === '.' || $item === '..') {
+                continue;
+            }
+            $this->moveDirectory($src . DIRECTORY_SEPARATOR . $item, $dest . DIRECTORY_SEPARATOR . $item);
+        }
+
+        rmdir($src);
     }
 
     private function deleteDirectory(string $dir): void {

@@ -42,6 +42,9 @@
 		"CreateWikiStatePrivate": {
 			"handler": "Main"
 		},
+    "CreateWikiStatePublic": {
+      "handler": "Main"
+    },
 		"CreateWikiTables": {
 			"handler": "Main"
 		},
