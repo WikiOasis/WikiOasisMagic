@@ -86,7 +86,7 @@ class GenerateWikiOasisSitemap extends Maintenance {
             $generateSitemap->setOption( 'fspath', $tempDir );
             $generateSitemap->setOption( 'urlpath', "/sitemaps/{$dbname}/" );
             $generateSitemap->setOption( 'server', $this->getConfig()->get( MainConfigNames::Server ) );
-            $generateSitemap->setOption( 'compress', 'yes' );
+            $generateSitemap->setOption( 'compress', 'no' );
             $generateSitemap->execute();
     
             foreach ( glob( $tempDir . "/sitemap-*{$dbname}*" ) as $sitemapFile ) {
