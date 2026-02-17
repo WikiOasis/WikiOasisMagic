@@ -48,7 +48,7 @@ class GenerateWikiOasisSitemap extends Maintenance {
         $tempDir = wfTempDir() . '/sitemaps';
     
         if ( $isPrivate ) {
-            $this->output( "Deleting sitemap for wiki {$dbname}\n" );
+            $this->output( "Deleting sitemap for private wiki {$dbname}\n" );
             if ( is_dir( $sitemapDir ) ) {
                 $this->deleteDirectory( $sitemapDir );
                 $this->output( "Sitemap directory {$sitemapDir} has been deleted.\n" );

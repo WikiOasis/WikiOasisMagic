@@ -10,7 +10,8 @@
 		"Paladox",
 		"Southparkfan",
 		"Universal Omega",
-		"Waki285"
+		"Waki285",
+        "Zippybonzo"
 	],
 	"url": "https://github.com/WikiOasis/WikiOasisMagic",
 	"descriptionmsg": "wikioasismagic-description",
@@ -18,7 +19,7 @@
 	"license-name": "GPL-3.0-or-later",
 	"type": "other",
 	"requires": {
-		"MediaWiki": ">= 1.42.0",
+		"MediaWiki": ">= 1.45.0",
 		"platform": {
 			"php": ">= 8.0"
 		}
