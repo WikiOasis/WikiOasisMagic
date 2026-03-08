@@ -23,6 +23,7 @@ namespace WikiOasis\WikiOasisMagic\Maintenance;
  *
  * @file
  * @ingroup Maintenance
+ * @version 1.0
  */
 
 define( 'MW_NO_EXTENSION_MESSAGES', 1 );
