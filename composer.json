@@ -1,0 +1,19 @@
+{
+	"name": "wikioasis/wikioasismagic",
+	"description": "WikiOasis messages, hooks and scripts.",
+	"type": "mediawiki-extension",
+	"license": "GPL-3.0-or-later",
+	"require": {
+		"aws/aws-sdk-php": "^3.67",
+		"composer/installers": "^1 || ^2"
+	},
+	"extra": {
+		"installer-name": "WikiOasisMagic"
+	},
+	"config": {
+		"allow-plugins": {
+			"composer/installers": true,
+			"dealerdirect/phpcodesniffer-composer-installer": true
+		}
+	}
+}
