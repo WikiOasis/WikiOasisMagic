@@ -4,6 +4,7 @@ namespace WikiOasis\WikiOasisMagic\Maintenance;
 
 use Aws\Exception\AwsException;
 use Aws\S3\S3Client;
+use MediaWiki\Http\HttpRequestFactory;
 use MediaWiki\MainConfigNames;
 use MediaWiki\Maintenance\Maintenance;
 use Miraheze\CreateWiki\Exceptions\MissingWikiError;
@@ -13,6 +14,7 @@ use function is_array;
 use function strtolower;
 
 class UpdateGarageBuckets extends Maintenance {
+	private HttpRequestFactory $httpRequestFactory;
 
 	private RemoteWikiFactory $remoteWikiFactory;
 
@@ -48,6 +50,7 @@ class UpdateGarageBuckets extends Maintenance {
 
 	private function initServices(): void {
 		$this->remoteWikiFactory = $this->getServiceContainer()->get( 'RemoteWikiFactory' );
+		$this->httpRequestFactory = $this->getServiceContainer()->getHttpRequestFactory();
 	}
 
 	/** @inheritDoc */
@@ -72,6 +75,7 @@ class UpdateGarageBuckets extends Maintenance {
 
 		$this->output( "Updating Garage bucket for wiki '{$targetWiki}'...\n" );
 		$this->ensureGarageBucket( $targetWiki );
+		$this->ensureGarageGlobalAlias( $targetWiki );
 		$this->syncBucketWebsiteAccess( $targetWiki, !$isPrivate );
 		$this->output(
 			$isPrivate
@@ -105,6 +109,130 @@ class UpdateGarageBuckets extends Maintenance {
 
 	private function getGarageBucketName( string $dbname ): string {
 		return strtolower( $dbname );
+	}
+
+	private function getGarageAdminApiKey(): string {
+		return trim( (string)$this->getConfig()->get( 'WikiOasisMagicGarageAdminAPIKey' ) );
+	}
+
+	private function getGarageAdminEndpoint(): ?string {
+		global $wgFileBackends;
+
+		$s3Endpoint = $wgFileBackends['s3']['endpoint'] ?? '';
+		if ( !is_string( $s3Endpoint ) || $s3Endpoint === '' ) {
+			return null;
+		}
+
+		$parts = parse_url( $s3Endpoint );
+		if ( !is_array( $parts ) || !isset( $parts['scheme'], $parts['host'] ) ) {
+			return null;
+		}
+
+		$port = isset( $parts['port'] ) ? (int)$parts['port'] : 3900;
+		if ( $port === 3900 ) {
+			$port = 3903;
+		}
+
+		return "{$parts['scheme']}://{$parts['host']}:{$port}";
+	}
+
+	private function garageAdminRequest( string $path, string $method = 'GET', array $body = [] ): ?array {
+		$apiKey = $this->getGarageAdminApiKey();
+		if ( $apiKey === '' ) {
+			$this->output( "Garage admin key is empty; skipping alias management.\n" );
+			return null;
+		}
+
+		$endpoint = $this->getGarageAdminEndpoint();
+		if ( $endpoint === null ) {
+			$this->output( "Could not derive Garage admin endpoint from S3 endpoint.\n" );
+			return null;
+		}
+
+		$requestOptions = [
+			'url' => rtrim( $endpoint, '/' ) . '/v2/' . ltrim( $path, '/' ),
+			'method' => $method,
+			'headers' => [
+				'Authorization' => 'Bearer ' . $apiKey,
+				'Content-Type' => 'application/json',
+			],
+		];
+
+		if ( $method === 'POST' ) {
+			$requestOptions['body'] = json_encode( $body );
+		}
+
+		$response = $this->httpRequestFactory->createMultiClient()->run(
+			$requestOptions,
+			[ 'reqTimeout' => 15 ]
+		);
+
+		if ( ( $response['code'] ?? 0 ) !== 200 ) {
+			$this->output(
+				'Garage admin request failed for ' . $path . ' with HTTP ' .
+				(string)( $response['code'] ?? 0 ) . ': ' . (string)( $response['body'] ?? '' ) . "\n"
+			);
+			return null;
+		}
+
+		$decoded = json_decode( (string)( $response['body'] ?? '' ), true );
+		return is_array( $decoded ) ? $decoded : null;
+	}
+
+	private function ensureGarageGlobalAlias( string $dbname ): void {
+		$listBuckets = $this->garageAdminRequest( 'ListBuckets' );
+		if ( !is_array( $listBuckets ) ) {
+			return;
+		}
+
+		foreach ( $listBuckets as $bucketInfo ) {
+			if ( !is_array( $bucketInfo ) ) {
+				continue;
+			}
+
+			$bucketId = (string)( $bucketInfo['id'] ?? '' );
+			if ( $bucketId === '' ) {
+				continue;
+			}
+
+			foreach ( (array)( $bucketInfo['globalAliases'] ?? [] ) as $globalAlias ) {
+				if ( (string)$globalAlias === $dbname ) {
+					$this->output( "Global alias '{$dbname}' already exists.\n" );
+					return;
+				}
+			}
+
+			$matchedLocalAlias = false;
+			foreach ( (array)( $bucketInfo['localAliases'] ?? [] ) as $localAlias ) {
+				if ( is_array( $localAlias ) && (string)( $localAlias['alias'] ?? '' ) === $dbname ) {
+					$matchedLocalAlias = true;
+					break;
+				}
+			}
+
+			if ( !$matchedLocalAlias ) {
+				continue;
+			}
+
+			$response = $this->garageAdminRequest(
+				'AddBucketAlias',
+				'POST',
+				[
+					'bucketId' => $bucketId,
+					'globalAlias' => $dbname,
+				]
+			);
+
+			if ( is_array( $response ) ) {
+				$this->output( "Added global alias '{$dbname}' to bucket '{$bucketId}'.\n" );
+			} else {
+				$this->output( "Failed to add global alias '{$dbname}' to bucket '{$bucketId}'.\n" );
+			}
+
+			return;
+		}
+
+		$this->output( "No bucket with local alias '{$dbname}' found for global alias promotion.\n" );
 	}
 
 	private function getS3Client(): S3Client {

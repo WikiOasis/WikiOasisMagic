@@ -121,6 +121,7 @@ class Main implements
                     'LanguageCode',
                     'LocalDatabases',
                     'ManageWikiSettings',
+                    'WikiOasisMagicGarageAdminAPIKey',
                     'WikiOasisMagicMemcachedServers',
                     'Script',
                 ],
@@ -167,6 +168,7 @@ class Main implements
             return;
         }
         $this->ensureGarageBucket($dbname);
+        $this->ensureGarageGlobalAlias($dbname);
         $this->syncBucketWebsiteAccess($dbname, !$private);
     }
 
@@ -195,6 +197,134 @@ class Main implements
     private function getGarageBucketName(string $dbname): string
     {
         return strtolower($dbname);
+    }
+
+    private function getGarageAdminApiKey(): string
+    {
+        return trim((string)$this->options->get('WikiOasisMagicGarageAdminAPIKey'));
+    }
+
+    private function getGarageAdminEndpoint(): ?string
+    {
+        global $wgFileBackends;
+
+        $s3Endpoint = $wgFileBackends['s3']['endpoint'] ?? '';
+        if (!is_string($s3Endpoint) || $s3Endpoint === '') {
+            return null;
+        }
+
+        $parts = parse_url($s3Endpoint);
+        if (!is_array($parts) || !isset($parts['scheme'], $parts['host'])) {
+            return null;
+        }
+
+        $port = isset($parts['port']) ? (int)$parts['port'] : 3900;
+        if ($port === 3900) {
+            $port = 3903;
+        }
+
+        return "{$parts['scheme']}://{$parts['host']}:{$port}";
+    }
+
+    private function garageAdminRequest(string $path, string $method = 'GET', array $body = []): ?array
+    {
+        $apiKey = $this->getGarageAdminApiKey();
+        if ($apiKey === '') {
+            wfDebugLog('WikiOasisMagic', 'Garage admin key is empty; skipping alias management.');
+            return null;
+        }
+
+        $endpoint = $this->getGarageAdminEndpoint();
+        if ($endpoint === null) {
+            wfDebugLog('WikiOasisMagic', 'Could not derive Garage admin endpoint from S3 endpoint.');
+            return null;
+        }
+
+        $requestOptions = [
+            'url' => rtrim($endpoint, '/') . '/v2/' . ltrim($path, '/'),
+            'method' => $method,
+            'headers' => [
+                'Authorization' => 'Bearer ' . $apiKey,
+                'Content-Type' => 'application/json',
+            ],
+        ];
+
+        if ($method === 'POST') {
+            $requestOptions['body'] = json_encode($body);
+        }
+
+        $response = $this->httpRequestFactory->createMultiClient()->run(
+            $requestOptions,
+            [ 'reqTimeout' => 15 ]
+        );
+
+        if (($response['code'] ?? 0) !== 200) {
+            wfDebugLog(
+                'WikiOasisMagic',
+                'Garage admin request failed for ' . $path . ' with HTTP ' .
+                    (string)($response['code'] ?? 0) . ': ' . (string)($response['body'] ?? '')
+            );
+            return null;
+        }
+
+        $decoded = json_decode((string)($response['body'] ?? ''), true);
+        return is_array($decoded) ? $decoded : null;
+    }
+
+    private function ensureGarageGlobalAlias(string $dbname): void
+    {
+        $listBuckets = $this->garageAdminRequest('ListBuckets');
+        if (!is_array($listBuckets)) {
+            return;
+        }
+
+        foreach ($listBuckets as $bucketInfo) {
+            if (!is_array($bucketInfo)) {
+                continue;
+            }
+
+            $bucketId = (string)($bucketInfo['id'] ?? '');
+            if ($bucketId === '') {
+                continue;
+            }
+
+            foreach ((array)($bucketInfo['globalAliases'] ?? []) as $globalAlias) {
+                if ((string)$globalAlias === $dbname) {
+                    return;
+                }
+            }
+
+            $matchedLocalAlias = false;
+            foreach ((array)($bucketInfo['localAliases'] ?? []) as $localAlias) {
+                if (is_array($localAlias) && (string)($localAlias['alias'] ?? '') === $dbname) {
+                    $matchedLocalAlias = true;
+                    break;
+                }
+            }
+
+            if (!$matchedLocalAlias) {
+                continue;
+            }
+
+            $response = $this->garageAdminRequest(
+                'AddBucketAlias',
+                'POST',
+                [
+                    'bucketId' => $bucketId,
+                    'globalAlias' => $dbname,
+                ]
+            );
+
+            if (is_array($response)) {
+                wfDebugLog('WikiOasisMagic', "Added global Garage alias '{$dbname}' to bucket '{$bucketId}'.");
+            } else {
+                wfDebugLog('WikiOasisMagic', "Failed to add global Garage alias '{$dbname}' to bucket '{$bucketId}'.");
+            }
+
+            return;
+        }
+
+        wfDebugLog('WikiOasisMagic', "No Garage bucket with local alias '{$dbname}' found for global alias promotion.");
     }
 
     private function getS3Client(): S3Client
@@ -253,26 +383,8 @@ class Main implements
         $s3 = $this->getS3Client();
 
         if ($public) {
-            $policy = json_encode([
-                'Version' => '2012-10-17',
-                'Statement' => [
-                    [
-                        'Sid' => 'AllowPublicRead',
-                        'Effect' => 'Allow',
-                        'Principal' => '*',
-                        'Action' => [ 's3:GetObject' ],
-                        'Resource' => [ "arn:aws:s3:::{$bucket}/*" ],
-                    ],
-                ],
-            ]);
 
             try {
-                if ($policy !== false) {
-                    $s3->putBucketPolicy([
-                        'Bucket' => $bucket,
-                        'Policy' => $policy,
-                    ]);
-                }
 
                 $s3->putBucketWebsite([
                     'Bucket' => $bucket,
@@ -294,15 +406,6 @@ class Main implements
             $errorCode = (string)$exception->getAwsErrorCode();
             if (!in_array($errorCode, [ 'NoSuchWebsiteConfiguration', 'NoSuchBucket' ], true)) {
                 wfDebugLog('WikiOasisMagic', "Failed disabling website config for {$bucket}: {$exception->getMessage()}");
-            }
-        }
-
-        try {
-            $s3->deleteBucketPolicy([ 'Bucket' => $bucket ]);
-        } catch (AwsException $exception) {
-            $errorCode = (string)$exception->getAwsErrorCode();
-            if (!in_array($errorCode, [ 'NoSuchBucketPolicy', 'NoSuchBucket' ], true)) {
-                wfDebugLog('WikiOasisMagic', "Failed removing website policy for {$bucket}: {$exception->getMessage()}");
             }
         }
     }

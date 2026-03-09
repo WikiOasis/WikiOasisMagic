@@ -90,6 +90,10 @@
 		}
 	},
 	"config": {
+		"WikiOasisMagicGarageAdminAPIKey": {
+			"description": "String. Bearer API key for Garage Admin API calls used to manage bucket aliases.",
+			"value": ""
+		},
 		"WikiOasisMagicMemcachedServers": {
 			"description": "Array. Memcached servers to use for clearing memcached keys when a wiki is deleted or renamed.",
 			"value": []
