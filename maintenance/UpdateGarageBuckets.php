@@ -10,7 +10,6 @@ use Miraheze\CreateWiki\Exceptions\MissingWikiError;
 use Miraheze\CreateWiki\Services\RemoteWikiFactory;
 use function in_array;
 use function is_array;
-use function json_encode;
 use function strtolower;
 
 class UpdateGarageBuckets extends Maintenance {
@@ -161,26 +160,8 @@ class UpdateGarageBuckets extends Maintenance {
 		$s3 = $this->getS3Client();
 
 		if ( $public ) {
-			$policy = json_encode( [
-				'Version' => '2012-10-17',
-				'Statement' => [
-					[
-						'Sid' => 'AllowPublicRead',
-						'Effect' => 'Allow',
-						'Principal' => '*',
-						'Action' => [ 's3:GetObject' ],
-						'Resource' => [ "arn:aws:s3:::{$bucket}/*" ],
-					],
-				],
-			] );
 
 			try {
-				if ( $policy !== false ) {
-					$s3->putBucketPolicy( [
-						'Bucket' => $bucket,
-						'Policy' => $policy,
-					] );
-				}
 
 				$s3->putBucketWebsite( [
 					'Bucket' => $bucket,
@@ -207,17 +188,6 @@ class UpdateGarageBuckets extends Maintenance {
 			if ( !in_array( $errorCode, [ 'NoSuchWebsiteConfiguration', 'NoSuchBucket' ], true ) ) {
 				$this->fatalError(
 					"Failed disabling website config for '{$bucket}': {$exception->getMessage()}"
-				);
-			}
-		}
-
-		try {
-			$s3->deleteBucketPolicy( [ 'Bucket' => $bucket ] );
-		} catch ( AwsException $exception ) {
-			$errorCode = (string)$exception->getAwsErrorCode();
-			if ( !in_array( $errorCode, [ 'NoSuchBucketPolicy', 'NoSuchBucket' ], true ) ) {
-				$this->fatalError(
-					"Failed removing website policy for '{$bucket}': {$exception->getMessage()}"
 				);
 			}
 		}
