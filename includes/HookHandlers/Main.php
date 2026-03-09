@@ -1,6 +1,8 @@
 <?php
 
 namespace WikiOasis\WikiOasisMagic\HookHandlers;
+use Aws\Exception\AwsException;
+use Aws\S3\S3Client;
 
 use MediaWiki\Cache\Hook\MessageCacheFetchOverridesHook;
 use MediaWiki\CommentStore\CommentStore;
@@ -26,6 +28,7 @@ use MediaWiki\Title\Title;
 use MediaWiki\User\User;
 use Memcached;
 use MessageCache;
+use Miraheze\CreateWiki\Hooks\CreateWikiCreationHook;
 use Miraheze\CreateWiki\Hooks\CreateWikiStatePrivateHook;
 use Miraheze\CreateWiki\Hooks\CreateWikiStatePublicHook;
 use Miraheze\CreateWiki\Hooks\CreateWikiTablesHook;
@@ -33,6 +36,7 @@ use MediaWiki\MediaWikiServices;
 use Miraheze\ImportDump\Hooks\ImportDumpJobGetFileHook;
 use Miraheze\ImportDump\Hooks\ImportDumpJobAfterImportHook;
 use Redis;
+use RuntimeException;
 use Skin;
 use Throwable;
 use Wikimedia\IPUtils;
@@ -41,6 +45,7 @@ use Wikimedia\Rdbms\ILBFactory;
 class Main implements
     AbuseFilterShouldFilterActionHook,
     ContributionsToolLinksHook,
+    CreateWikiCreationHook,
     CreateWikiStatePrivateHook,
     CreateWikiStatePublicHook,
     CreateWikiTablesHook,
@@ -82,6 +87,13 @@ class Main implements
         $this->commentStore = $commentStore;
         $this->dbLoadBalancerFactory = $dbLoadBalancerFactory;
         $this->httpRequestFactory = $httpRequestFactory;
+    }
+
+    private function shouldManageGarageBuckets(): bool
+    {
+        global $wgDBname;
+
+        return $wgDBname === 'metawiki';
     }
 
     /**
@@ -149,6 +161,15 @@ class Main implements
         }
     }
 
+    public function onCreateWikiCreation(string $dbname, bool $private): void
+    {
+        if (!$this->shouldManageGarageBuckets()) {
+            return;
+        }
+        $this->ensureGarageBucket($dbname);
+        $this->syncBucketWebsiteAccess($dbname, !$private);
+    }
+
     public function onCreateWikiStatePrivate(string $dbname): void
     {
         $dir = "/var/www/mediawiki/sitemaps/{$dbname}";
@@ -159,53 +180,131 @@ class Main implements
             wfDebugLog('WikiOasisMagic', "Directory {$dir} does not exist.");
         }
 
-        // move images
-        $imagesDir = "/var/www/mediawiki/images/{$dbname}";
-        $dest = "/var/www/images/{$dbname}";
-        if (is_dir($imagesDir)) {
-            $this->moveDirectory($imagesDir, $dest);
-            wfDebugLog("WikiOasisMagic", "Directory {$imagesDir} has been moved to {$dest}.");
-        } else {
-            wfDebugLog("WikiOasisMagic", "Directory {$imagesDir} does not exist.");
+        if ($this->shouldManageGarageBuckets()) {
+            $this->syncBucketWebsiteAccess($dbname, false);
         }
     }
 
     public function onCreateWikiStatePublic(string $dbname): void
     {
-        $dir = "/var/www/images/{$dbname}";
-        $dest = "/var/www/mediawiki/images/{$dbname}";
-        if (is_dir($dir)) {
-            $this->moveDirectory($dir, $dest);
-            wfDebugLog("WikiOasisMagic", "Directory {$dir} has been moved to {$dest}.");
-        } else {
-            wfDebugLog("WikiOasisMagic", "Directory {$dir} does not exist.");
+        if ($this->shouldManageGarageBuckets()) {
+            $this->syncBucketWebsiteAccess($dbname, true);
         }
-
     }
 
-    private function moveDirectory(string $src, string $dest): void
+    private function getGarageBucketName(string $dbname): string
     {
-        if (!file_exists($src)) {
-            return;
+        return strtolower($dbname);
+    }
+
+    private function getS3Client(): S3Client
+    {
+        global $wgAWSCredentials, $wgAWSRegion, $wgFileBackends;
+
+        $s3Config = $wgFileBackends['s3'] ?? [];
+        $clientConfig = [
+            'version' => $s3Config['version'] ?? 'latest',
+            'region' => $wgAWSRegion ?: 'garage',
+        ];
+
+        if (!empty($wgAWSCredentials['key']) && !empty($wgAWSCredentials['secret'])) {
+            $clientConfig['credentials'] = $wgAWSCredentials;
         }
 
-        if (!is_dir($src) || is_link($src)) {
-            rename($src, $dest);
-            return;
+        if (isset($s3Config['endpoint'])) {
+            $clientConfig['endpoint'] = $s3Config['endpoint'];
         }
 
-        if (!is_dir($dest)) {
-            mkdir($dest, 0755, true);
+        if (isset($s3Config['use_path_style_endpoint'])) {
+            $clientConfig['use_path_style_endpoint'] = (bool)$s3Config['use_path_style_endpoint'];
         }
 
-        foreach (scandir($src) as $item) {
-            if ($item === '.' || $item === '..') {
-                continue;
+        if (isset($s3Config['http']) && is_array($s3Config['http'])) {
+            $clientConfig['http'] = $s3Config['http'];
+        }
+
+        return new S3Client($clientConfig);
+    }
+
+    private function ensureGarageBucket(string $dbname): void
+    {
+        $bucket = $this->getGarageBucketName($dbname);
+        $s3 = $this->getS3Client();
+
+        try {
+            $s3->createBucket([ 'Bucket' => $bucket ]);
+            $s3->waitUntil('BucketExists', [ 'Bucket' => $bucket ]);
+            wfDebugLog('WikiOasisMagic', "Garage bucket {$bucket} created.");
+        } catch (AwsException $exception) {
+            $errorCode = (string)$exception->getAwsErrorCode();
+
+            if (in_array($errorCode, [ 'BucketAlreadyExists', 'BucketAlreadyOwnedByYou' ], true)) {
+                return;
             }
-            $this->moveDirectory($src . DIRECTORY_SEPARATOR . $item, $dest . DIRECTORY_SEPARATOR . $item);
+
+            wfDebugLog('WikiOasisMagic', "Failed creating Garage bucket {$bucket}: {$exception->getMessage()}");
+        }
+    }
+
+    private function syncBucketWebsiteAccess(string $dbname, bool $public): void
+    {
+        $bucket = $this->getGarageBucketName($dbname);
+        $this->ensureGarageBucket($dbname);
+        $s3 = $this->getS3Client();
+
+        if ($public) {
+            $policy = json_encode([
+                'Version' => '2012-10-17',
+                'Statement' => [
+                    [
+                        'Sid' => 'AllowPublicRead',
+                        'Effect' => 'Allow',
+                        'Principal' => '*',
+                        'Action' => [ 's3:GetObject' ],
+                        'Resource' => [ "arn:aws:s3:::{$bucket}/*" ],
+                    ],
+                ],
+            ]);
+
+            try {
+                if ($policy !== false) {
+                    $s3->putBucketPolicy([
+                        'Bucket' => $bucket,
+                        'Policy' => $policy,
+                    ]);
+                }
+
+                $s3->putBucketWebsite([
+                    'Bucket' => $bucket,
+                    'WebsiteConfiguration' => [
+                        'IndexDocument' => [ 'Suffix' => 'index.html' ],
+                        'ErrorDocument' => [ 'Key' => 'error.html' ],
+                    ],
+                ]);
+            } catch (AwsException $exception) {
+                wfDebugLog('WikiOasisMagic', "Failed enabling website access for {$bucket}: {$exception->getMessage()}");
+            }
+
+            return;
         }
 
-        rmdir($src);
+        try {
+            $s3->deleteBucketWebsite([ 'Bucket' => $bucket ]);
+        } catch (AwsException $exception) {
+            $errorCode = (string)$exception->getAwsErrorCode();
+            if (!in_array($errorCode, [ 'NoSuchWebsiteConfiguration', 'NoSuchBucket' ], true)) {
+                wfDebugLog('WikiOasisMagic', "Failed disabling website config for {$bucket}: {$exception->getMessage()}");
+            }
+        }
+
+        try {
+            $s3->deleteBucketPolicy([ 'Bucket' => $bucket ]);
+        } catch (AwsException $exception) {
+            $errorCode = (string)$exception->getAwsErrorCode();
+            if (!in_array($errorCode, [ 'NoSuchBucketPolicy', 'NoSuchBucket' ], true)) {
+                wfDebugLog('WikiOasisMagic', "Failed removing website policy for {$bucket}: {$exception->getMessage()}");
+            }
+        }
     }
 
     private function deleteDirectory(string $dir): void {

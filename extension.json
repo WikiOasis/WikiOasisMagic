@@ -40,6 +40,9 @@
 		"ContributionsToolLinks": {
 			"handler": "Main"
 		},
+		"CreateWikiCreation": {
+			"handler": "Main"
+		},
 		"CreateWikiStatePrivate": {
 			"handler": "Main"
 		},
