@@ -89,13 +89,6 @@ class Main implements
         $this->httpRequestFactory = $httpRequestFactory;
     }
 
-    private function shouldManageGarageBuckets(): bool
-    {
-        global $wgDBname;
-
-        return $wgDBname === 'metawiki';
-    }
-
     /**
      * @param Config $mainConfig
      * @param CommentStore $commentStore
@@ -164,9 +157,6 @@ class Main implements
 
     public function onCreateWikiCreation(string $dbname, bool $private): void
     {
-        if (!$this->shouldManageGarageBuckets()) {
-            return;
-        }
         $this->ensureGarageBucket($dbname);
         $this->ensureGarageGlobalAlias($dbname);
         $this->syncBucketWebsiteAccess($dbname, !$private);
@@ -181,17 +171,12 @@ class Main implements
         } else {
             wfDebugLog('WikiOasisMagic', "Directory {$dir} does not exist.");
         }
-
-        if ($this->shouldManageGarageBuckets()) {
-            $this->syncBucketWebsiteAccess($dbname, false);
-        }
+        $this->syncBucketWebsiteAccess($dbname, false);
     }
 
     public function onCreateWikiStatePublic(string $dbname): void
     {
-        if ($this->shouldManageGarageBuckets()) {
-            $this->syncBucketWebsiteAccess($dbname, true);
-        }
+        $this->syncBucketWebsiteAccess($dbname, true);
     }
 
     private function getGarageBucketName(string $dbname): string
