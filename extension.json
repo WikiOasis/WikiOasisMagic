@@ -99,6 +99,9 @@
 			"value": []
 		}
 	},
+	"ServiceWiringFiles": [
+		"ServiceWiring.php"
+	],
 	"ConfigRegistry": {
 		"WikiOasisMagic": "MediaWiki\\Config\\GlobalVarConfig::newInstance"
 	},
