@@ -20,7 +20,7 @@ class RequestWiki implements
     public function onRequestWikiFormDescriptorModify( array &$formDescriptor ): void {
         RequestWikiFormUtils::insertFieldAfter(
             $formDescriptor,
-            afterKey: 'bio',
+            afterKey: 'reason',
             newKey: 'nsfw',
             newField: [
                 'label-message' => 'requestwiki-label-nsfw',
@@ -123,7 +123,7 @@ class RequestWiki implements
 
         RequestWikiFormUtils::insertFieldAfter(
             $formDescriptor,
-            afterKey: 'edit-purpose',
+            afterKey: 'edit-nsfw-primary',
             newKey: 'edit-source',
             newField: [
                 'label-message' => 'requestwiki-label-source',
