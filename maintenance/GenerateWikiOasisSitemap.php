@@ -73,12 +73,23 @@ class GenerateWikiOasisSitemap extends Maintenance {
             mkdir( $tempDir, 0755, true );
         }
 
+        $wikiServer = $this->getConfig()->get( MainConfigNames::Server );
+
         $generateSitemap = $this->createChild( GenerateSitemap::class );
         $generateSitemap->setOption( 'fspath', $tempDir );
-        $generateSitemap->setOption( 'urlpath', $urlBase );
-        $generateSitemap->setOption( 'server', $this->getConfig()->get( MainConfigNames::Server ) );
+        $generateSitemap->setOption( 'urlpath', "/{$prefix}" );
+        $generateSitemap->setOption( 'server', $wikiServer );
         $generateSitemap->setOption( 'compress', 'no' );
         $generateSitemap->execute();
+
+        // Rewrite the sitemap index so its <loc> entries point to the S3 CDN URL
+        // rather than the wiki server that GenerateSitemap embeds by default.
+        $indexFile = $tempDir . "/sitemap-index-{$dbname}.xml";
+        if ( is_file( $indexFile ) ) {
+            $content = file_get_contents( $indexFile );
+            $content = str_replace( $wikiServer . "/{$prefix}", $urlBase, $content );
+            file_put_contents( $indexFile, $content );
+        }
 
         foreach ( glob( $tempDir . "/sitemap-*{$dbname}*" ) ?: [] as $file ) {
             if ( !is_file( $file ) ) {
