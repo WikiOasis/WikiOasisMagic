@@ -43,12 +43,15 @@
 		"CreateWikiCreation": {
 			"handler": "Main"
 		},
+        "CreateWikiCreationExtraFields": {
+          "handler": "RequestWiki"
+        },
 		"CreateWikiStatePrivate": {
 			"handler": "Main"
 		},
-    "CreateWikiStatePublic": {
-      "handler": "Main"
-    },
+        "CreateWikiStatePublic": {
+          "handler": "Main"
+        },
 		"CreateWikiTables": {
 			"handler": "Main"
 		},
@@ -67,6 +70,12 @@
 		"MimeMagicInit": {
 			"handler": "Main"
 		},
+        "RequestWikiFormDescriptorModify": {
+          "handler": "RequestWiki"
+        },
+        "RequestWikiQueueFormDescriptorModify": {
+          "handler": "RequestWiki"
+        },
 		"SiteNoticeAfter": {
 			"handler": "Main"
 		},
@@ -76,7 +85,7 @@
 		"TitleReadWhitelist": {
 			"handler": "Main"
 		}
-	},
+    },
 	"HookHandlers": {
 		"Main": {
 			"class": "WikiOasis\\WikiOasisMagic\\HookHandlers\\Main",
