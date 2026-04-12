@@ -54,7 +54,7 @@ class RequestWiki implements
 
         RequestWikiFormUtils::insertFieldAfter(
             $formDescriptor,
-            afterKey: 'purpose',
+            afterKey: 'nsfw-primary',
             newKey: 'source',
             newField: [
                 'label-message' => 'requestwiki-label-source',
