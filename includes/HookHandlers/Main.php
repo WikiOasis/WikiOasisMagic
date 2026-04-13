@@ -22,7 +22,7 @@ use MediaWiki\Hook\SkinAddFooterLinksHook;
 use MediaWiki\Html\Html;
 use MediaWiki\Http\HttpRequestFactory;
 use MediaWiki\Linker\Linker;
-use MediaWiki\Block\Hook\BlockIpCompleteHook;
+use MediaWiki\Hook\BlockIpCompleteHook;
 use MediaWiki\MainConfigNames;
 use MediaWiki\Permissions\Hook\TitleReadWhitelistHook;
 use MediaWiki\WikiMap\WikiMap;
