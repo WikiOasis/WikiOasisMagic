@@ -7,6 +7,8 @@ use Aws\S3\S3Client;
 use MediaWiki\Cache\Hook\MessageCacheFetchOverridesHook;
 use MediaWiki\CommentStore\CommentStore;
 use MediaWiki\Config\Config;
+use MediaWiki\Config\ConfigFactory;
+use MediaWiki\Config\MultiConfig;
 use MediaWiki\Config\ServiceOptions;
 use MediaWiki\Extension\AbuseFilter\AbuseFilterServices;
 use MediaWiki\Extension\AbuseFilter\Hooks\AbuseFilterShouldFilterActionHook;
@@ -94,6 +96,7 @@ class Main implements
 
     /**
      * @param Config $mainConfig
+     * @param ConfigFactory $configFactory
      * @param CommentStore $commentStore
      * @param ILBFactory $dbLoadBalancerFactory
      * @param HttpRequestFactory $httpRequestFactory
@@ -102,10 +105,12 @@ class Main implements
      */
     public static function factory(
         Config $mainConfig,
+        ConfigFactory $configFactory,
         CommentStore $commentStore,
         ILBFactory $dbLoadBalancerFactory,
         HttpRequestFactory $httpRequestFactory
     ): self {
+        $wikiOasisMagicConfig = $configFactory->makeConfig( 'WikiOasisMagic' );
         return new self(
             new ServiceOptions(
                 [
@@ -123,7 +128,7 @@ class Main implements
                     'WikiOasisMagicReportsWriteKey',
                     'Script',
                 ],
-                $mainConfig
+                new MultiConfig( [ $wikiOasisMagicConfig, $mainConfig ] )
             ),
             $commentStore,
             $dbLoadBalancerFactory,
