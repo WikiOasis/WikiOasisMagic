@@ -95,6 +95,7 @@
 			"factory": "WikiOasis\\WikiOasisMagic\\HookHandlers\\Main::factory",
 			"services": [
 				"MainConfig",
+				"ConfigFactory",
 				"CommentStore",
 				"DBLoadBalancerFactory",
 				"HttpRequestFactory"
