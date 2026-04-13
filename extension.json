@@ -37,6 +37,9 @@
 		"AbuseFilterShouldFilterAction": {
 			"handler": "Main"
 		},
+        "BlockIpComplete": {
+            "handler": "Main"
+        },
 		"ContributionsToolLinks": {
 			"handler": "Main"
 		},
@@ -44,13 +47,13 @@
 			"handler": "Main"
 		},
         "CreateWikiCreationExtraFields": {
-          "handler": "RequestWiki"
+            "handler": "RequestWiki"
         },
 		"CreateWikiStatePrivate": {
 			"handler": "Main"
 		},
         "CreateWikiStatePublic": {
-          "handler": "Main"
+            "handler": "Main"
         },
 		"CreateWikiTables": {
 			"handler": "Main"
@@ -71,10 +74,10 @@
 			"handler": "Main"
 		},
         "RequestWikiFormDescriptorModify": {
-          "handler": "RequestWiki"
+            "handler": "RequestWiki"
         },
         "RequestWikiQueueFormDescriptorModify": {
-          "handler": "RequestWiki"
+            "handler": "RequestWiki"
         },
 		"SiteNoticeAfter": {
 			"handler": "Main"
@@ -109,7 +112,15 @@
 		"WikiOasisMagicMemcachedServers": {
 			"description": "Array. Memcached servers to use for clearing memcached keys when a wiki is deleted or renamed.",
 			"value": []
-		}
+		},
+        "WikiOasisMagicReportsBlockAlertKeywords": {
+          "description": "Array. Words in block reasons which trigger a report being sent to TSPortal.",
+          "value": []
+        },
+        "WikiOasisMagicReportsWriteKey": {
+          "description": "String. TSPortal write key to be used when connecting to it.",
+          "value": ""
+        }
 	},
 	"ServiceWiringFiles": [
 		"ServiceWiring.php"
