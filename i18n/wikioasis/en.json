@@ -121,5 +121,6 @@
 	"mediaspoiler-desc": "Allows you to add spoilers to media files on pages",
 	"pdf-desc": "An easy way to upload and view PDFs on your wiki",
 	"simplebatchupload-name": "SimpleBatchUpload",
-	"simplebatchupload-desc": "A simple way to batch upload files"
+	"simplebatchupload-desc": "A simple way to batch upload files",
+	"revdelete-reason-dropdown-suppress": "*Common suppress reasons \n **Potentially libelous information \n **Copyright infringement \n **Blatant attack name \n **Removal of vandalism"
 }
