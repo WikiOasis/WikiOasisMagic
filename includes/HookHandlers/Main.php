@@ -357,6 +357,16 @@ class Main implements
         $s3 = $this->getS3Client();
 
         try {
+            $s3->headBucket([ 'Bucket' => $bucket ]);
+            return;
+        } catch (AwsException $exception) {
+            if ($exception->getStatusCode() !== 404) {
+                wfDebugLog('WikiOasisMagic', "Failed checking Garage bucket {$bucket}: {$exception->getMessage()}");
+                return;
+            }
+        }
+
+        try {
             $s3->createBucket([ 'Bucket' => $bucket ]);
             $s3->waitUntil('BucketExists', [ 'Bucket' => $bucket ]);
             wfDebugLog('WikiOasisMagic', "Garage bucket {$bucket} created.");

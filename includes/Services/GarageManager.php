@@ -51,6 +51,15 @@ class GarageManager {
 	private function ensureBucket( string $name ): bool {
 		$s3 = $this->getS3Client();
 		try {
+			$s3->headBucket( [ 'Bucket' => $name ] );
+			return true;
+		} catch ( AwsException $e ) {
+			if ( $e->getStatusCode() !== 404 ) {
+				wfDebugLog( 'WikiOasisMagic', "Failed checking Garage bucket '{$name}': {$e->getMessage()}" );
+				return false;
+			}
+		}
+		try {
 			$s3->createBucket( [ 'Bucket' => $name ] );
 			$s3->waitUntil( 'BucketExists', [ 'Bucket' => $name ] );
 			wfDebugLog( 'WikiOasisMagic', "Garage bucket '{$name}' created." );
