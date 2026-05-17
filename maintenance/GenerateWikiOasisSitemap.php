@@ -57,7 +57,7 @@ class GenerateWikiOasisSitemap extends Maintenance {
 
         if ( $isPrivate ) {
             $this->output( "Deleting sitemaps for private wiki {$dbname}\n" );
-            $this->deleteS3Prefix( $s3, $bucket, $prefix );
+            $this->deleteS3Prefix( $s3, $bucket, $prefix );}[/]
             return;
         }
 
