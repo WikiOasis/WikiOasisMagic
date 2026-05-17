@@ -268,6 +268,16 @@ class UpdateGarageBuckets extends Maintenance {
 		$s3 = $this->getS3Client();
 
 		try {
+			$s3->headBucket( [ 'Bucket' => $bucket ] );
+			$this->output( "Bucket '{$bucket}' already exists.\n" );
+			return;
+		} catch ( AwsException $exception ) {
+			if ( $exception->getStatusCode() !== 404 ) {
+				$this->fatalError( "Failed checking bucket '{$bucket}': {$exception->getMessage()}" );
+			}
+		}
+
+		try {
 			$s3->createBucket( [ 'Bucket' => $bucket ] );
 			$s3->waitUntil( 'BucketExists', [ 'Bucket' => $bucket ] );
 			$this->output( "Created bucket '{$bucket}'.\n" );
