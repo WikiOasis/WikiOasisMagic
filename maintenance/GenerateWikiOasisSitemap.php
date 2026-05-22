@@ -43,21 +43,21 @@ class GenerateWikiOasisSitemap extends Maintenance {
     }
 
     public function execute() {
-        global $wgAWSBucketDomain, $wgAWSCredentials, $wgAWSRegion, $wgFileBackends;
+        global $wgAWSBucketDomain, $wgAWSBucketName;
 
         $dbname = $this->getConfig()->get( MainConfigNames::DBname );
         $remoteWikiFactory = $this->getServiceContainer()->get( 'RemoteWikiFactory' );
         $remoteWiki = $remoteWikiFactory->newInstance( $dbname );
         $isPrivate = $remoteWiki->isPrivate();
 
-        $bucket = strtolower( $dbname );
-        $prefix = 'sitemaps/';
+        $bucket = $wgAWSBucketName ?? '';
+        $prefix = strtolower( $dbname ) . '/sitemaps/';
 
         $s3 = $this->getS3Client();
 
         if ( $isPrivate ) {
             $this->output( "Deleting sitemaps for private wiki {$dbname}\n" );
-            $this->deleteS3Prefix( $s3, $bucket, $prefix );}[/]
+            $this->deleteS3Prefix( $s3, $bucket, $prefix );
             return;
         }
 
@@ -81,8 +81,6 @@ class GenerateWikiOasisSitemap extends Maintenance {
         $generateSitemap->setOption( 'server', $wikiServer );
         $generateSitemap->setOption( 'compress', 'no' );
         $generateSitemap->execute();
-
-        $indexFile = $tempDir . "/sitemap-index-{$dbname}.xml";
 
         foreach ( glob( $tempDir . "/sitemap-*{$dbname}*" ) ?: [] as $file ) {
             if ( !is_file( $file ) ) {
@@ -109,7 +107,6 @@ class GenerateWikiOasisSitemap extends Maintenance {
     private function resolveBucketDomain( string $wgAWSBucketDomain, string $bucket ): string {
         if ( $wgAWSBucketDomain !== '' ) {
             $domain = str_replace( '$1', $bucket, $wgAWSBucketDomain );
-            // Strip any scheme so the caller can prepend https:// exactly once
             $domain = preg_replace( '#^https?://#', '', $domain );
             return rtrim( $domain, '/' );
         }
@@ -161,7 +158,7 @@ class GenerateWikiOasisSitemap extends Maintenance {
         $s3Config = $wgFileBackends['s3'] ?? [];
         $clientConfig = [
             'version' => $s3Config['version'] ?? 'latest',
-            'region' => $wgAWSRegion ?: 'garage',
+            'region' => $wgAWSRegion ?: 'auto',
         ];
 
         if ( !empty( $wgAWSCredentials['key'] ) && !empty( $wgAWSCredentials['secret'] ) ) {
