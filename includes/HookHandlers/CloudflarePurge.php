@@ -32,17 +32,27 @@ class CloudflarePurge implements
 	}
 
 	public function onPageSaveComplete( $wikiPage, $user, $summary, $flags, $revisionRecord, $editResult ): void {
+		LoggerFactory::getInstance( 'WikiOasisMagic' )->info( 'CloudflarePurge: PageSaveComplete hook fired', [
+			'title' => $wikiPage->getTitle()->getPrefixedText(),
+		] );
 		$this->enqueuePurge( [ $wikiPage->getTitle()->getFullURL() ], 'PageSaveComplete' );
 	}
 
 	public function onPageDeleteComplete( ProperPageIdentity $page, Authority $deleter, string $reason, int $pageID, RevisionRecord $deletedRev, ManualLogEntry $logEntry, int $archivedRevisionCount ): void {
 		$title = Title::castFromPageIdentity( $page );
+		LoggerFactory::getInstance( 'WikiOasisMagic' )->info( 'CloudflarePurge: PageDeleteComplete hook fired', [
+			'title' => $title ? $title->getPrefixedText() : '(unknown)',
+		] );
 		if ( $title ) {
 			$this->enqueuePurge( [ $title->getFullURL() ], 'PageDeleteComplete' );
 		}
 	}
 
 	public function onPageMoveComplete( $old, $new, $user, $pageid, $redirid, $reason, $revision ): void {
+		LoggerFactory::getInstance( 'WikiOasisMagic' )->info( 'CloudflarePurge: PageMoveComplete hook fired', [
+			'old' => $old->getDBkey(),
+			'new' => $new->getDBkey(),
+		] );
 		$this->enqueuePurge( [
 			Title::newFromLinkTarget( $old )->getFullURL(),
 			Title::newFromLinkTarget( $new )->getFullURL(),
@@ -50,10 +60,16 @@ class CloudflarePurge implements
 	}
 
 	public function onArticlePurge( $wikiPage ) {
+		LoggerFactory::getInstance( 'WikiOasisMagic' )->info( 'CloudflarePurge: ArticlePurge hook fired', [
+			'title' => $wikiPage->getTitle()->getPrefixedText(),
+		] );
 		$this->enqueuePurge( [ $wikiPage->getTitle()->getFullURL() ], 'ArticlePurge' );
 	}
 
 	public function onLocalFilePurgeThumbnails( $file, $archiveName, $urls ): void {
+		LoggerFactory::getInstance( 'WikiOasisMagic' )->info( 'CloudflarePurge: LocalFilePurgeThumbnails hook fired', [
+			'file' => $file->getName(),
+		] );
 		$purgeURLs = [ $this->expandURL( $file->getUrl() ) ];
 		foreach ( $urls as $url ) {
 			$purgeURLs[] = $this->expandURL( $url );
@@ -62,15 +78,20 @@ class CloudflarePurge implements
 	}
 
 	private function enqueuePurge( array $urls, string $hook ): void {
+		$logger = LoggerFactory::getInstance( 'WikiOasisMagic' );
 		$apiToken = $this->config->get( 'WikiOasisMagicCloudflareAPIToken' );
 		$zoneID = $this->config->get( 'WikiOasisMagicCloudflareZoneID' );
 
 		if ( !$apiToken || !$zoneID ) {
+			$logger->warning( 'CloudflarePurge: credentials not configured, skipping purge', [
+				'hook' => $hook,
+				'hasToken' => (bool)$apiToken,
+				'hasZoneID' => (bool)$zoneID,
+			] );
 			return;
 		}
 
-		$logger = LoggerFactory::getInstance( 'WikiOasisMagic' );
-		$logger->debug( 'Cloudflare purge job enqueued', [
+		$logger->info( 'Cloudflare purge job enqueued', [
 			'hook' => $hook,
 			'urls' => $urls,
 		] );
