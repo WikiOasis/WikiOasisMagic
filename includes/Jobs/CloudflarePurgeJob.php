@@ -4,10 +4,11 @@ namespace WikiOasis\WikiOasisMagic\Jobs;
 
 use GuzzleHttp\Exception\RequestException;
 use Job;
+use MediaWiki\JobQueue\GenericParameterJob;
 use MediaWiki\Logger\LoggerFactory;
 use MediaWiki\MediaWikiServices;
 
-class CloudflarePurgeJob extends Job {
+class CloudflarePurgeJob extends Job implements GenericParameterJob {
 
 	public function __construct( array $params ) {
 		parent::__construct( 'cloudflarePagePurge', $params );

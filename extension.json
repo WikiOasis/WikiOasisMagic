@@ -152,7 +152,10 @@
 		}
 	},
 	"JobClasses": {
-		"cloudflarePagePurge": "WikiOasis\\WikiOasisMagic\\Jobs\\CloudflarePurgeJob"
+		"cloudflarePagePurge": {
+			"class": "WikiOasis\\WikiOasisMagic\\Jobs\\CloudflarePurgeJob",
+			"needsPage": false
+		}
 	},
 	"ServiceWiringFiles": [
 		"ServiceWiring.php"
