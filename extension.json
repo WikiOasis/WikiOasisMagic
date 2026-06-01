@@ -31,7 +31,8 @@
 	},
 	"AutoloadNamespaces": {
 		"WikiOasis\\WikiOasisMagic\\": "includes/",
-    "WikiOasis\\WikiOasisMagic\\Maintenance\\": "maintenance/"
+		"WikiOasis\\WikiOasisMagic\\Jobs\\": "includes/Jobs/",
+		"WikiOasis\\WikiOasisMagic\\Maintenance\\": "maintenance/"
 	},
 	"Hooks": {
 		"AbuseFilterShouldFilterAction": {
@@ -119,8 +120,7 @@
 		"CloudflarePurge": {
 			"class": "WikiOasis\\WikiOasisMagic\\HookHandlers\\CloudflarePurge",
 			"services": [
-				"MainConfig",
-				"HttpRequestFactory"
+				"MainConfig"
 			]
 		},
 		"RequestWiki": {
@@ -150,6 +150,9 @@
 			"public": false,
 			"value": ""
 		}
+	},
+	"JobClasses": {
+		"cloudflarePagePurge": "WikiOasis\\WikiOasisMagic\\Jobs\\CloudflarePurgeJob"
 	},
 	"ServiceWiringFiles": [
 		"ServiceWiring.php"

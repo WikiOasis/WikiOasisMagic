@@ -2,13 +2,12 @@
 
 namespace WikiOasis\WikiOasisMagic\HookHandlers;
 
-use GuzzleHttp\Exception\RequestException;
 use ManualLogEntry;
 use MediaWiki\Config\Config;
 use MediaWiki\Hook\ArticlePurgeHook;
 use MediaWiki\Hook\LocalFilePurgeThumbnailsHook;
 use MediaWiki\Hook\PageMoveCompleteHook;
-use MediaWiki\Http\HttpRequestFactory;
+use MediaWiki\Logger\LoggerFactory;
 use MediaWiki\MediaWikiServices;
 use MediaWiki\Page\Hook\PageDeleteCompleteHook;
 use MediaWiki\Page\ProperPageIdentity;
@@ -16,6 +15,7 @@ use MediaWiki\Permissions\Authority;
 use MediaWiki\Revision\RevisionRecord;
 use MediaWiki\Storage\Hook\PageSaveCompleteHook;
 use MediaWiki\Title\Title;
+use WikiOasis\WikiOasisMagic\Jobs\CloudflarePurgeJob;
 use WikiPage;
 
 class CloudflarePurge implements
@@ -27,33 +27,31 @@ class CloudflarePurge implements
 {
 
 	private Config $config;
-	private HttpRequestFactory $httpRequestFactory;
 
-	public function __construct( Config $config, HttpRequestFactory $httpRequestFactory ) {
+	public function __construct( Config $config ) {
 		$this->config = $config;
-		$this->httpRequestFactory = $httpRequestFactory;
 	}
 
 	public function onPageSaveComplete( $wikiPage, $user, $summary, $flags, $revisionRecord, $editResult ): void {
-		$this->cachePurge( [ $wikiPage->getTitle()->getFullURL() ] );
+		$this->enqueuePurge( [ $wikiPage->getTitle()->getFullURL() ], 'PageSaveComplete' );
 	}
 
 	public function onPageDeleteComplete( ProperPageIdentity $page, Authority $deleter, string $reason, int $pageID, RevisionRecord $deletedRev, ManualLogEntry $logEntry, int $archivedRevisionCount ): void {
 		$title = Title::castFromPageIdentity( $page );
 		if ( $title ) {
-			$this->cachePurge( [ $title->getFullURL() ] );
+			$this->enqueuePurge( [ $title->getFullURL() ], 'PageDeleteComplete' );
 		}
 	}
 
 	public function onPageMoveComplete( $old, $new, $user, $pageid, $redirid, $reason, $revision ): void {
-		$this->cachePurge( [
+		$this->enqueuePurge( [
 			Title::newFromLinkTarget( $old )->getFullURL(),
 			Title::newFromLinkTarget( $new )->getFullURL(),
-		] );
+		], 'PageMoveComplete' );
 	}
 
 	public function onArticlePurge( WikiPage $wikiPage ) {
-		$this->cachePurge( [ $wikiPage->getTitle()->getFullURL() ] );
+		$this->enqueuePurge( [ $wikiPage->getTitle()->getFullURL() ], 'ArticlePurge' );
 	}
 
 	public function onLocalFilePurgeThumbnails( $file, $archiveName, $urls ): void {
@@ -61,10 +59,10 @@ class CloudflarePurge implements
 		foreach ( $urls as $url ) {
 			$purgeURLs[] = $this->expandURL( $url );
 		}
-		$this->cachePurge( $purgeURLs );
+		$this->enqueuePurge( $purgeURLs, 'LocalFilePurgeThumbnails' );
 	}
 
-	private function cachePurge( array $urls ): void {
+	private function enqueuePurge( array $urls, string $hook ): void {
 		$apiToken = $this->config->get( 'WikiOasisMagicCloudflareAPIToken' );
 		$zoneID = $this->config->get( 'WikiOasisMagicCloudflareZoneID' );
 
@@ -72,22 +70,14 @@ class CloudflarePurge implements
 			return;
 		}
 
-		$guzzleClient = $this->httpRequestFactory->createGuzzleClient();
+		$logger = LoggerFactory::getInstance( 'WikiOasisMagic' );
+		$logger->debug( 'Cloudflare purge job enqueued', [
+			'hook' => $hook,
+			'urls' => $urls,
+		] );
 
-		try {
-			$guzzleClient->post(
-				"https://api.cloudflare.com/client/v4/zones/{$zoneID}/purge_cache",
-				[
-					'headers' => [
-						'Authorization' => "Bearer {$apiToken}",
-						'Content-Type' => 'application/json',
-					],
-					'json' => [ 'files' => $urls ],
-				]
-			);
-		} catch ( RequestException $e ) {
-			wfDebugLog( 'WikiOasisMagic', 'Cloudflare purge failed: ' . $e->getMessage() );
-		}
+		$job = new CloudflarePurgeJob( [ 'urls' => $urls ] );
+		MediaWikiServices::getInstance()->getJobQueueGroup()->push( $job );
 	}
 
 	private function expandURL( string $url ): string {
