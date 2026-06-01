@@ -16,7 +16,6 @@ use MediaWiki\Revision\RevisionRecord;
 use MediaWiki\Storage\Hook\PageSaveCompleteHook;
 use MediaWiki\Title\Title;
 use WikiOasis\WikiOasisMagic\Jobs\CloudflarePurgeJob;
-use WikiPage;
 
 class CloudflarePurge implements
 	PageSaveCompleteHook,
@@ -50,7 +49,7 @@ class CloudflarePurge implements
 		], 'PageMoveComplete' );
 	}
 
-	public function onArticlePurge( WikiPage $wikiPage ) {
+	public function onArticlePurge( $wikiPage ) {
 		$this->enqueuePurge( [ $wikiPage->getTitle()->getFullURL() ], 'ArticlePurge' );
 	}
 
