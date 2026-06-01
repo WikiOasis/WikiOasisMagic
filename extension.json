@@ -37,6 +37,21 @@
 		"AbuseFilterShouldFilterAction": {
 			"handler": "Main"
 		},
+		"ArticlePurge": {
+			"handler": "CloudflarePurge"
+		},
+		"LocalFilePurgeThumbnails": {
+			"handler": "CloudflarePurge"
+		},
+		"PageDeleteComplete": {
+			"handler": "CloudflarePurge"
+		},
+		"PageMoveComplete": {
+			"handler": "CloudflarePurge"
+		},
+		"PageSaveComplete": {
+			"handler": "CloudflarePurge"
+		},
         "BlockIpComplete": {
             "handler": "Main"
         },
@@ -101,6 +116,13 @@
 				"HttpRequestFactory"
 			]
 		},
+		"CloudflarePurge": {
+			"class": "WikiOasis\\WikiOasisMagic\\HookHandlers\\CloudflarePurge",
+			"services": [
+				"MainConfig",
+				"HttpRequestFactory"
+			]
+		},
 		"RequestWiki": {
 			"class": "WikiOasis\\WikiOasisMagic\\HookHandlers\\RequestWiki"
 		}
@@ -117,7 +139,17 @@
         "WikiOasisMagicReportsWriteKey": {
           "description": "String. TSPortal write key to be used when connecting to it.",
           "value": ""
-        }
+        },
+		"WikiOasisMagicCloudflareAPIToken": {
+			"description": "Cloudflare API Token used for cache purging.",
+			"public": false,
+			"value": ""
+		},
+		"WikiOasisMagicCloudflareZoneID": {
+			"description": "Cloudflare Zone ID for this wiki's domain.",
+			"public": false,
+			"value": ""
+		}
 	},
 	"ServiceWiringFiles": [
 		"ServiceWiring.php"
