@@ -4,7 +4,7 @@ namespace WikiOasis\WikiOasisMagic\HookHandlers;
 
 use ManualLogEntry;
 use MediaWiki\Config\Config;
-use MediaWiki\Hook\ArticlePurgeHook;
+use MediaWiki\Page\Hook\ArticlePurgeHook;
 use MediaWiki\Hook\LocalFilePurgeThumbnailsHook;
 use MediaWiki\Hook\PageMoveCompleteHook;
 use MediaWiki\Logger\LoggerFactory;
