@@ -12,7 +12,6 @@ use Sentry\Tracing\SpanStatus;
 use Sentry\Tracing\Transaction;
 use Sentry\Tracing\TransactionSource;
 use Throwable;
-
 use function Sentry\continueTrace;
 use function Sentry\startTransaction;
 
