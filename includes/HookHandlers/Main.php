@@ -114,7 +114,6 @@ class Main implements
 				[
 					'ArticlePath',
 					'CreateWikiCacheDirectory',
-					'CreateWikiGlobalWiki',
 					'EchoSharedTrackingDB',
 					'JobTypeConf',
 					'LanguageCode',
