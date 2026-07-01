@@ -56,7 +56,7 @@ class Main implements
     ImportDumpJobAfterImportHook,
     MessageCacheFetchOverridesHook,
     MimeMagicInitHook,
-    AfterHook,
+    SiteNoticeAfterHook,
     SkinAddFooterLinksHook,
     TitleReadWhitelistHook
 {
@@ -306,7 +306,7 @@ class Main implements
                  'snapwikiskin',
                  'uploadtext',
                  'webauthn-module-description',
-                 'wikibase-sitelinks-miraheze',*/
+                 'wikibase-sitelinks-',*/
         ];
 
         $languageCode = $this->options->get(MainConfigNames::LanguageCode);
@@ -431,7 +431,7 @@ class Main implements
     {
         /*if ( $key === 'places' ) {
                   $footerItems['termsofservice'] = $this->addFooterLink( $skin, 'termsofservice', 'termsofservicepage' );
-                  $footerItems['donate'] = $this->addFooterLink( $skin, 'miraheze-donate', 'miraheze-donatepage' );
+                  $footerItems['donate'] = $this->addFooterLink( $skin, '-donate', '-donatepage' );
               }*/
     }
 
