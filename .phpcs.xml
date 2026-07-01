@@ -1,0 +1,21 @@
+<?xml version="1.0"?>
+<ruleset name="WikiOasisMagic">
+	<rule ref="./vendor/mediawiki/mediawiki-codesniffer/MediaWiki">
+		<exclude name="Generic.Files.LineLength" />
+		<exclude name="MediaWiki.Commenting.FunctionComment.MissingDocumentationPublic" />
+	</rule>
+	<rule ref="MediaWiki.WhiteSpace.SpaceBeforeSingleLineComment.NewLineComment">
+		<severity>5</severity>
+	</rule>
+	<rule ref="MediaWiki.Usage.NestedFunctions.NestedFunctions">
+		<severity>5</severity>
+	</rule>
+	<rule ref="MediaWiki.NamingConventions.ValidGlobalName.allowedPrefix">
+		<severity>5</severity>
+	</rule>
+	<file>.</file>
+	<arg name="extensions" value="php" />
+	<arg name="encoding" value="UTF-8" />
+	<config name="installed_paths" value="../../phpcsstandards/phpcsextra,../../phpcsstandards/phpcsutils" />
+	<arg name="bootstrap" value="./vendor/mediawiki/mediawiki-codesniffer/utils/bootstrap-ci.php" />
+</ruleset>
