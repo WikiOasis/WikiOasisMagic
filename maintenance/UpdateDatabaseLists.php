@@ -37,6 +37,12 @@ class GenerateDatabaseLists extends Maintenance {
         $this->addDescription( 'Generates database list cache files for all wikis' );
     }
 
+    /**
+     * @suppress PhanUndeclaredStaticMethod,PhanEmptyForeach MirahezeFunctions is provided
+     *   by the WikiOasis/mw-config site configuration required in by LocalSettings.php,
+     *   not a MediaWiki extension CI can clone, so phan can't see it populates
+     *   $databaseLists by reference
+     */
     public function execute() {
         $databaseLists = [];
 
@@ -50,6 +56,11 @@ class GenerateDatabaseLists extends Maintenance {
         $this->output( "Successfully generated " . count( $databaseLists ) . " database lists.\n" );
     }
 
+    /**
+     * @suppress PhanUndeclaredStaticMethod MirahezeFunctions is provided by the
+     *   WikiOasis/mw-config site configuration required in by LocalSettings.php,
+     *   not a MediaWiki extension CI can clone
+     */
     private function writeCacheFile( string $listName, array $data ): void {
         $cacheDir = MirahezeFunctions::getCacheDirectory();
         $fileName = "$cacheDir/$listName.php";

@@ -522,21 +522,26 @@ class Main implements
         );
     }
 
-    /** Removes redis keys for jobrunner */
+    /**
+     * Removes redis keys for jobrunner
+     * @suppress PhanUndeclaredClassReference,PhanUndeclaredClassMethod ext-redis is not
+     *   installed in the CI analysis environment
+     */
     private function removeRedisKey(string $key)
     {
         $jobTypeConf = $this->options->get(MainConfigNames::JobTypeConf);
-        if (!isset($jobTypeConf['default']['redisServer']) || !$jobTypeConf['default']['redisServer']) {
+        $default = $jobTypeConf['default'] ?? [];
+        if (!isset($default['redisServer']) || !$default['redisServer']) {
             return;
         }
 
-        $hostAndPort = IPUtils::splitHostAndPort($jobTypeConf['default']['redisServer']);
+        $hostAndPort = IPUtils::splitHostAndPort($default['redisServer']);
 
         if ($hostAndPort) {
             try {
                 $redis = new Redis();
                 $redis->connect($hostAndPort[0], $hostAndPort[1]);
-                $redis->auth($jobTypeConf['default']['redisConfig']['password']);
+                $redis->auth($default['redisConfig']['password'] ?? '');
                 $redis->del($redis->keys($key));
             } catch (Throwable) {
                 // empty

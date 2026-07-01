@@ -10,7 +10,6 @@ $extensions = [
 	'GlobalUserPage',
 	'ImportDump',
 	'ManageWiki',
-	'MirahezeMagic',
 ];
 
 foreach ( $extensions as $extension ) {

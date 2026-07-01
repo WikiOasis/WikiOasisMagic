@@ -19,6 +19,3 @@ ImportDump:
 ManageWiki:
   branch: main
   repo: https://github.com/miraheze/ManageWiki
-MirahezeMagic:
-  branch: main
-  repo: https://github.com/miraheze/MirahezeMagic
