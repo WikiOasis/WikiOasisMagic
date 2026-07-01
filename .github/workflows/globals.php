@@ -3,7 +3,7 @@
 use MediaWiki\MainConfigNames;
 use MediaWiki\MediaWikiServices;
 use Wikimedia\Rdbms\Database;
-use Wikimedia\Rdbms\DBQueryError;
+use Wikimedia\Rdbms\DBExpectedError;
 
 $wgGlobalUserPageDBname = 'wikidb';
 $wgHooks['MediaWikiServices'][] = 'wfOnMediaWikiServices';
@@ -21,7 +21,7 @@ function wfOnMediaWikiServices( MediaWikiServices $services ): void {
 		}
 
 		putenv( 'ECHO_SQL_EXECUTED=true' );
-	} catch ( DBQueryError ) {
+	} catch ( DBExpectedError ) {
 		// Do nothing
 	}
 }
