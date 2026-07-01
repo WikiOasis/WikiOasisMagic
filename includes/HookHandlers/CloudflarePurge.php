@@ -4,11 +4,11 @@ namespace WikiOasis\WikiOasisMagic\HookHandlers;
 
 use ManualLogEntry;
 use MediaWiki\Config\Config;
-use MediaWiki\Page\Hook\ArticlePurgeHook;
 use MediaWiki\Hook\LocalFilePurgeThumbnailsHook;
 use MediaWiki\Hook\PageMoveCompleteHook;
 use MediaWiki\Logger\LoggerFactory;
 use MediaWiki\MediaWikiServices;
+use MediaWiki\Page\Hook\ArticlePurgeHook;
 use MediaWiki\Page\Hook\PageDeleteCompleteHook;
 use MediaWiki\Page\ProperPageIdentity;
 use MediaWiki\Permissions\Authority;

@@ -1,6 +1,7 @@
 <?php
 
 namespace WikiOasis\WikiOasisMagic\HookHandlers;
+
 use MediaWiki\Cache\Hook\MessageCacheFetchOverridesHook;
 use MediaWiki\CommentStore\CommentStore;
 use MediaWiki\Config\Config;
@@ -11,6 +12,7 @@ use MediaWiki\Extension\AbuseFilter\AbuseFilterServices;
 use MediaWiki\Extension\AbuseFilter\Hooks\AbuseFilterShouldFilterActionHook;
 use MediaWiki\Extension\AbuseFilter\Variables\VariableHolder;
 use MediaWiki\Extension\CentralAuth\User\CentralAuthUser;
+use MediaWiki\Hook\BlockIpCompleteHook;
 use MediaWiki\Hook\ContributionsToolLinksHook;
 use MediaWiki\Hook\GetLocalURL__InternalHook;
 use MediaWiki\Hook\MimeMagicInitHook;
@@ -19,23 +21,22 @@ use MediaWiki\Hook\SkinAddFooterLinksHook;
 use MediaWiki\Html\Html;
 use MediaWiki\Http\HttpRequestFactory;
 use MediaWiki\Linker\Linker;
-use MediaWiki\Hook\BlockIpCompleteHook;
 use MediaWiki\MainConfigNames;
+use MediaWiki\MediaWikiServices;
 use MediaWiki\Permissions\Hook\TitleReadWhitelistHook;
-use MediaWiki\WikiMap\WikiMap;
 use MediaWiki\Shell\Shell;
 use MediaWiki\SpecialPage\SpecialPage;
 use MediaWiki\Title\Title;
 use MediaWiki\User\User;
+use MediaWiki\WikiMap\WikiMap;
 use Memcached;
 use MessageCache;
 use Miraheze\CreateWiki\Hooks\CreateWikiCreationHook;
 use Miraheze\CreateWiki\Hooks\CreateWikiStatePrivateHook;
 use Miraheze\CreateWiki\Hooks\CreateWikiStatePublicHook;
 use Miraheze\CreateWiki\Hooks\CreateWikiTablesHook;
-use MediaWiki\MediaWikiServices;
-use Miraheze\ImportDump\Hooks\ImportDumpJobGetFileHook;
 use Miraheze\ImportDump\Hooks\ImportDumpJobAfterImportHook;
+use Miraheze\ImportDump\Hooks\ImportDumpJobGetFileHook;
 use Redis;
 use RuntimeException;
 use Skin;
@@ -44,531 +45,521 @@ use Wikimedia\IPUtils;
 use Wikimedia\Rdbms\ILBFactory;
 
 class Main implements
-    AbuseFilterShouldFilterActionHook,
-    BlockIpCompleteHook,
-    ContributionsToolLinksHook,
-    CreateWikiCreationHook,
-    CreateWikiStatePrivateHook,
-    CreateWikiStatePublicHook,
-    CreateWikiTablesHook,
-    GetLocalURL__InternalHook,
-    ImportDumpJobGetFileHook,
-    ImportDumpJobAfterImportHook,
-    MessageCacheFetchOverridesHook,
-    MimeMagicInitHook,
-    SiteNoticeAfterHook,
-    SkinAddFooterLinksHook,
-    TitleReadWhitelistHook
+	AbuseFilterShouldFilterActionHook,
+	BlockIpCompleteHook,
+	ContributionsToolLinksHook,
+	CreateWikiCreationHook,
+	CreateWikiStatePrivateHook,
+	CreateWikiStatePublicHook,
+	CreateWikiTablesHook,
+	GetLocalURL__InternalHook,
+	ImportDumpJobGetFileHook,
+	ImportDumpJobAfterImportHook,
+	MessageCacheFetchOverridesHook,
+	MimeMagicInitHook,
+	SiteNoticeAfterHook,
+	SkinAddFooterLinksHook,
+	TitleReadWhitelistHook
 {
 
-    /** @var ServiceOptions */
-    private $options;
+	/** @var ServiceOptions */
+	private $options;
 
-    /** @var CommentStore */
-    private $commentStore;
+	/** @var CommentStore */
+	private $commentStore;
 
-    /** @var ILBFactory */
-    private $dbLoadBalancerFactory;
+	/** @var ILBFactory */
+	private $dbLoadBalancerFactory;
 
-    /** @var HttpRequestFactory */
-    private $httpRequestFactory;
+	/** @var HttpRequestFactory */
+	private $httpRequestFactory;
 
-    /**
-     * @param ServiceOptions $options
-     * @param CommentStore $commentStore
-     * @param ILBFactory $dbLoadBalancerFactory
-     * @param HttpRequestFactory $httpRequestFactory
-     */
-    public function __construct(
-        ServiceOptions $options,
-        CommentStore $commentStore,
-        ILBFactory $dbLoadBalancerFactory,
-        HttpRequestFactory $httpRequestFactory
-    ) {
-        $this->options = $options;
-        $this->commentStore = $commentStore;
-        $this->dbLoadBalancerFactory = $dbLoadBalancerFactory;
-        $this->httpRequestFactory = $httpRequestFactory;
-    }
+	/**
+	 * @param ServiceOptions $options
+	 * @param CommentStore $commentStore
+	 * @param ILBFactory $dbLoadBalancerFactory
+	 * @param HttpRequestFactory $httpRequestFactory
+	 */
+	public function __construct(
+		ServiceOptions $options,
+		CommentStore $commentStore,
+		ILBFactory $dbLoadBalancerFactory,
+		HttpRequestFactory $httpRequestFactory
+	) {
+		$this->options = $options;
+		$this->commentStore = $commentStore;
+		$this->dbLoadBalancerFactory = $dbLoadBalancerFactory;
+		$this->httpRequestFactory = $httpRequestFactory;
+	}
 
-    /**
-     * @param Config $mainConfig
-     * @param ConfigFactory $configFactory
-     * @param CommentStore $commentStore
-     * @param ILBFactory $dbLoadBalancerFactory
-     * @param HttpRequestFactory $httpRequestFactory
-     *
-     * @return self
-     */
-    public static function factory(
-        Config $mainConfig,
-        ConfigFactory $configFactory,
-        CommentStore $commentStore,
-        ILBFactory $dbLoadBalancerFactory,
-        HttpRequestFactory $httpRequestFactory
-    ): self {
-        $wikiOasisMagicConfig = $configFactory->makeConfig( 'WikiOasisMagic' );
-        return new self(
-            new ServiceOptions(
-                [
-                    'ArticlePath',
-                    'CreateWikiCacheDirectory',
-                    'CreateWikiGlobalWiki',
-                    'EchoSharedTrackingDB',
-                    'JobTypeConf',
-                    'LanguageCode',
-                    'LocalDatabases',
-                    'ManageWikiSettings',
-                    'WikiOasisMagicMemcachedServers',
-                    'WikiOasisMagicReportsBlockAlertKeywords',
-                    'WikiOasisMagicReportsWriteKey',
-                    'Script',
-                ],
-                new MultiConfig( [ $wikiOasisMagicConfig, $mainConfig ] )
-            ),
-            $commentStore,
-            $dbLoadBalancerFactory,
-            $httpRequestFactory
-        );
-    }
+	/**
+	 * @param Config $mainConfig
+	 * @param ConfigFactory $configFactory
+	 * @param CommentStore $commentStore
+	 * @param ILBFactory $dbLoadBalancerFactory
+	 * @param HttpRequestFactory $httpRequestFactory
+	 *
+	 * @return self
+	 */
+	public static function factory(
+		Config $mainConfig,
+		ConfigFactory $configFactory,
+		CommentStore $commentStore,
+		ILBFactory $dbLoadBalancerFactory,
+		HttpRequestFactory $httpRequestFactory
+	): self {
+		$wikiOasisMagicConfig = $configFactory->makeConfig( 'WikiOasisMagic' );
+		return new self(
+			new ServiceOptions(
+				[
+					'ArticlePath',
+					'CreateWikiCacheDirectory',
+					'EchoSharedTrackingDB',
+					'JobTypeConf',
+					'LanguageCode',
+					'LocalDatabases',
+					'ManageWikiSettings',
+					'WikiOasisMagicMemcachedServers',
+					'WikiOasisMagicReportsBlockAlertKeywords',
+					'WikiOasisMagicReportsWriteKey',
+					'Script',
+				],
+				new MultiConfig( [ $wikiOasisMagicConfig, $mainConfig ] )
+			),
+			$commentStore,
+			$dbLoadBalancerFactory,
+			$httpRequestFactory
+		);
+	}
 
-    /**
-     * Avoid filtering automatic account creation
-     *
-     * @param VariableHolder $vars
-     * @param Title $title
-     * @param User $user
-     * @param array &$skipReasons
-     * @return bool|void
-     */
-    public function onAbuseFilterShouldFilterAction(
-        VariableHolder $vars,
-        Title $title,
-        User $user,
-        array &$skipReasons
-    ) {
-        if (defined('MW_PHPUNIT_TEST')) {
-            return;
-        }
+	/**
+	 * Avoid filtering automatic account creation
+	 *
+	 * @param VariableHolder $vars
+	 * @param Title $title
+	 * @param User $user
+	 * @param array &$skipReasons
+	 * @return bool|void
+	 */
+	public function onAbuseFilterShouldFilterAction(
+		VariableHolder $vars,
+		Title $title,
+		User $user,
+		array &$skipReasons
+	) {
+		if ( defined( 'MW_PHPUNIT_TEST' ) ) {
+			return;
+		}
 
-        $varManager = AbuseFilterServices::getVariablesManager();
+		$varManager = AbuseFilterServices::getVariablesManager();
 
-        $action = $varManager->getVar($vars, 'action', 1)->toString();
-        if ($action === 'autocreateaccount') {
-            $skipReasons[] = 'Blocking automatic account creation is not allowed';
+		$action = $varManager->getVar( $vars, 'action', 1 )->toString();
+		if ( $action === 'autocreateaccount' ) {
+			$skipReasons[] = 'Blocking automatic account creation is not allowed';
 
-            return false;
-        }
-    }
+			return false;
+		}
+	}
 
-    public function onCreateWikiCreation(string $dbname, bool $private): void
-    {
-    }
+	public function onCreateWikiCreation( string $dbname, bool $private ): void {
+	}
 
-    public function onCreateWikiStatePrivate(string $dbname): void
-    {
-        $dir = "/var/www/mediawiki/sitemaps/{$dbname}";
-        if (is_dir($dir)) {
-            $this->deleteDirectory($dir);
-            wfDebugLog('WikiOasisMagic', "Directory {$dir} has been deleted.");
-        } else {
-            wfDebugLog('WikiOasisMagic', "Directory {$dir} does not exist.");
-        }
-    }
+	public function onCreateWikiStatePrivate( string $dbname ): void {
+		$dir = "/var/www/mediawiki/sitemaps/{$dbname}";
+		if ( is_dir( $dir ) ) {
+			$this->deleteDirectory( $dir );
+			wfDebugLog( 'WikiOasisMagic', "Directory {$dir} has been deleted." );
+		} else {
+			wfDebugLog( 'WikiOasisMagic', "Directory {$dir} does not exist." );
+		}
+	}
 
-    public function onCreateWikiStatePublic(string $dbname): void
-    {
-    }
+	public function onCreateWikiStatePublic( string $dbname ): void {
+	}
 
-    private function deleteDirectory(string $dir): void {
-        if (!file_exists($dir)) {
-            return;
-        }
-    
-        if (!is_dir($dir) || is_link($dir)) {
-            unlink($dir);
-            return;
-        }
-    
-        foreach (scandir($dir) as $item) {
-            if ($item === '.' || $item === '..') {
-                continue;
-            }
-            $this->deleteDirectory($dir . DIRECTORY_SEPARATOR . $item);
-        }
-    
-        rmdir($dir);
-    }
+	private function deleteDirectory( string $dir ): void {
+		if ( !file_exists( $dir ) ) {
+			return;
+		}
 
-    public function onCreateWikiTables(array &$cTables): void
-    {
-        $cTables['localnames'] = 'ln_wiki';
-        $cTables['localuser'] = 'lu_wiki';
-    }
+		if ( !is_dir( $dir ) || is_link( $dir ) ) {
+			unlink( $dir );
+			return;
+		}
 
-    public function onImportDumpJobGetFile(&$filePath, $importDumpRequestManager): void
-    {
-        wfDebugLog('WikiOasisMagic', "Importing dump from {$filePath}");
-        $originalFilePath = $importDumpRequestManager->getSplitFilePath();
+		foreach ( scandir( $dir ) as $item ) {
+			if ( $item === '.' || $item === '..' ) {
+				continue;
+			}
+			$this->deleteDirectory( $dir . DIRECTORY_SEPARATOR . $item );
+		}
 
-        if ($originalFilePath === null) {
-            return;
-        }
+		rmdir( $dir );
+	}
 
-        wfDebugLog('WikiOasisMagic', "Importing dump from {$originalFilePath} to {$filePath}");
+	public function onCreateWikiTables( array &$cTables ): void {
+		$cTables['localnames'] = 'ln_wiki';
+		$cTables['localuser'] = 'lu_wiki';
+	}
 
-        // copy $originalFilePath to $filePath file
-        if (!copy('/var/www/mediawiki/images/metawiki/' . $originalFilePath, $filePath)) {
-            throw new RuntimeException("Failed to copy $originalFilePath to $filePath");
-        }
+	public function onImportDumpJobGetFile( &$filePath, $importDumpRequestManager ): void {
+		wfDebugLog( 'WikiOasisMagic', "Importing dump from {$filePath}" );
+		$originalFilePath = $importDumpRequestManager->getSplitFilePath();
 
-        wfDebugLog('WikiOasisMagic', "Importing dump from {$originalFilePath} to {$filePath} done");
-    }
+		if ( $originalFilePath === '' ) {
+			return;
+		}
 
-    public function onImportDumpJobAfterImport($filePath, $importDumpRequestManager): void
-    {
-        $limits = ['memory' => 0, 'filesize' => 0, 'time' => 0, 'walltime' => 0];
-        Shell::command('/bin/rm', $filePath)
-            ->limits($limits)
-            ->disableSandbox()
-            ->execute();
-    }
+		wfDebugLog( 'WikiOasisMagic', "Importing dump from {$originalFilePath} to {$filePath}" );
 
-    /**
-     * From WikimediaMessages
-     * When core requests certain messages, change the key to a Miraheze version.
-     *
-     * @see https://www.mediawiki.org/wiki/Manual:Hooks/MessageCacheFetchOverrides
-     * @param string[] &$keys
-     */
-    public function onMessageCacheFetchOverrides(array &$keys): void
-    {
-        static $keysToOverride = [
-        /*'centralauth-groupname',
-                 'centralauth-login-error-locked',
-                 'createwiki-close-email-body',
-                 'createwiki-close-email-sender',
-                 'createwiki-close-email-subject',
-                 'createwiki-defaultmainpage',
-                 'createwiki-defaultmainpage-summary',
-                 'createwiki-email-body',
-                 'createwiki-email-subject',
-                 'createwiki-error-subdomaintaken',
-                 'createwiki-help-bio',
-                 'createwiki-help-category',
-                 'createwiki-help-reason',
-                 'createwiki-help-subdomain',
-                 'createwiki-label-reason',
-                 'dberr-again',
-                 'dberr-problems',
-                 'globalblocking-ipblocked-range',
-                 'globalblocking-ipblocked-xff',
-                 'globalblocking-ipblocked',*/
-        'grouppage-autoconfirmed',
-        'grouppage-automoderated',
-        'grouppage-autoreview',
-        'grouppage-blockedfromchat',
-        'grouppage-bot',
-        'grouppage-bureaucrat',
-        'grouppage-chatmod',
-        'grouppage-checkuser',
-        'grouppage-commentadmin',
-        'grouppage-csmoderator',
-        'grouppage-editor',
-        'grouppage-flow-bot',
-        'grouppage-interface-admin',
-        'grouppage-moderator',
-        'grouppage-no-ipinfo',
-        'grouppage-reviewer',
-        'grouppage-suppress',
-        'grouppage-sysop',
-        'grouppage-upwizcampeditors',
-        'grouppage-user',
-        /*'importdump-help-reason',
-                 'importdump-help-target',
-                 'importdump-help-upload-file',
-                 'importdump-import-failed-comment',
-                 'importtext',
-                 'interwiki_intro',
-                 'newsignuppage-loginform-tos',
-                 'newsignuppage-must-accept-tos',
-                 'oathauth-step1',
-                 'prefs-help-realname',
-                 'privacypage',
-                 'requestwiki-error-invalidcomment',
-                 'requestwiki-info-guidance',
-                 'requestwiki-info-guidance-post',
-                 'requestwiki-label-agreement',
-                 'requestwiki-success',
-                 'restriction-delete',
-                 'restriction-protect',
-                 'skinname-snapwikiskin',
-                 'snapwikiskin',
-                 'uploadtext',
-                 'webauthn-module-description',
-                 'wikibase-sitelinks-miraheze',*/
-        ];
+		// copy $originalFilePath to $filePath file
+		if ( !copy( '/var/www/mediawiki/images/metawiki/' . $originalFilePath, $filePath ) ) {
+			throw new RuntimeException( "Failed to copy $originalFilePath to $filePath" );
+		}
 
-        $languageCode = $this->options->get(MainConfigNames::LanguageCode);
+		wfDebugLog( 'WikiOasisMagic', "Importing dump from {$originalFilePath} to {$filePath} done" );
+	}
 
-        $transformationCallback = static function (string $key, MessageCache $cache) use ($languageCode): string {
-            $transformedKey = "wikioasis-$key";
+	public function onImportDumpJobAfterImport( $filePath, $importDumpRequestManager ): void {
+		$limits = [ 'memory' => 0, 'filesize' => 0, 'time' => 0, 'walltime' => 0 ];
+		Shell::command( '/bin/rm', $filePath )
+			->limits( $limits )
+			->disableSandbox()
+			->execute();
+	}
 
-            // MessageCache uses ucfirst if ord( key ) is < 128, which is true of all
-            // of the above.  Revisit if non-ASCII keys are used.
-            $ucKey = ucfirst($key);
+	/**
+	 * From WikimediaMessages
+	 * When core requests certain messages, change the key to a Miraheze version.
+	 *
+	 * @see https://www.mediawiki.org/wiki/Manual:Hooks/MessageCacheFetchOverrides
+	 * @param string[] &$keys
+	 */
+	public function onMessageCacheFetchOverrides( array &$keys ): void {
+		static $keysToOverride = [
+		/*'centralauth-groupname',
+				 'centralauth-login-error-locked',
+				 'createwiki-close-email-body',
+				 'createwiki-close-email-sender',
+				 'createwiki-close-email-subject',
+				 'createwiki-defaultmainpage',
+				 'createwiki-defaultmainpage-summary',
+				 'createwiki-email-body',
+				 'createwiki-email-subject',
+				 'createwiki-error-subdomaintaken',
+				 'createwiki-help-bio',
+				 'createwiki-help-category',
+				 'createwiki-help-reason',
+				 'createwiki-help-subdomain',
+				 'createwiki-label-reason',
+				 'dberr-again',
+				 'dberr-problems',
+				 'globalblocking-ipblocked-range',
+				 'globalblocking-ipblocked-xff',
+				 'globalblocking-ipblocked',*/
+		'grouppage-autoconfirmed',
+		'grouppage-automoderated',
+		'grouppage-autoreview',
+		'grouppage-blockedfromchat',
+		'grouppage-bot',
+		'grouppage-bureaucrat',
+		'grouppage-chatmod',
+		'grouppage-checkuser',
+		'grouppage-commentadmin',
+		'grouppage-csmoderator',
+		'grouppage-editor',
+		'grouppage-flow-bot',
+		'grouppage-interface-admin',
+		'grouppage-moderator',
+		'grouppage-no-ipinfo',
+		'grouppage-reviewer',
+		'grouppage-suppress',
+		'grouppage-sysop',
+		'grouppage-upwizcampeditors',
+		'grouppage-user',
+		/*'importdump-help-reason',
+				 'importdump-help-target',
+				 'importdump-help-upload-file',
+				 'importdump-import-failed-comment',
+				 'importtext',
+				 'interwiki_intro',
+				 'newsignuppage-loginform-tos',
+				 'newsignuppage-must-accept-tos',
+				 'oathauth-step1',
+				 'prefs-help-realname',
+				 'privacypage',
+				 'requestwiki-error-invalidcomment',
+				 'requestwiki-info-guidance',
+				 'requestwiki-info-guidance-post',
+				 'requestwiki-label-agreement',
+				 'requestwiki-success',
+				 'restriction-delete',
+				 'restriction-protect',
+				 'skinname-snapwikiskin',
+				 'snapwikiskin',
+				 'uploadtext',
+				 'webauthn-module-description',
+				 'wikibase-sitelinks-miraheze',*/
+		];
 
-            if (
-                /*
-                 * Override order:
-                 * 1. If the MediaWiki:$ucKey page exists, use the key unprefixed
-                 * (in all languages) with normal fallback order.  Specific
-                 * language pages (MediaWiki:$ucKey/xy) are not checked when
-                 * deciding which key to use, but are still used if applicable
-                 * after the key is decided.
-                 *
-                 * 2. Otherwise, use the prefixed key with normal fallback order
-                 * (including MediaWiki pages if they exist).
-                 */
-                $cache->getMsgFromNamespace($ucKey, $languageCode) === false
-            ) {
-                return $transformedKey;
-            }
+		$languageCode = $this->options->get( MainConfigNames::LanguageCode );
 
-            return $key;
-        };
+		$transformationCallback = static function ( string $key, MessageCache $cache ) use ( $languageCode ): string {
+			$transformedKey = "wikioasis-$key";
 
-        foreach ($keysToOverride as $key) {
-            $keys[$key] = $transformationCallback;
-        }
-    }
+			// MessageCache uses ucfirst if ord( key ) is < 128, which is true of all
+			// of the above.  Revisit if non-ASCII keys are used.
+			$ucKey = ucfirst( $key );
 
-    public function onTitleReadWhitelist($title, $user, &$whitelisted)
-    {
-        if ($title->equals(Title::newMainPage())) {
-            $whitelisted = true;
-            return;
-        }
+			if (
+				/*
+				 * Override order:
+				 * 1. If the MediaWiki:$ucKey page exists, use the key unprefixed
+				 * (in all languages) with normal fallback order.  Specific
+				 * language pages (MediaWiki:$ucKey/xy) are not checked when
+				 * deciding which key to use, but are still used if applicable
+				 * after the key is decided.
+				 *
+				 * 2. Otherwise, use the prefixed key with normal fallback order
+				 * (including MediaWiki pages if they exist).
+				 */
+				$cache->getMsgFromNamespace( $ucKey, $languageCode ) === false
+			) {
+				return $transformedKey;
+			}
 
-        $specialsArray = [
-            'CentralAutoLogin',
-            'CentralLogin',
-            'ConfirmEmail',
-            'CreateAccount',
-            'Notifications',
-            'OAuth',
-            'ResetPassword'
-        ];
+			return $key;
+		};
 
-        if ($user->isAllowed('interwiki')) {
-            $specialsArray[] = 'Interwiki';
-        }
+		foreach ( $keysToOverride as $key ) {
+			$keys[$key] = $transformationCallback;
+		}
+	}
 
-        if ($title->isSpecialPage()) {
-            $rootName = strtok($title->getText(), '/');
-            $rootTitle = Title::makeTitle($title->getNamespace(), $rootName);
+	public function onTitleReadWhitelist( $title, $user, &$whitelisted ) {
+		if ( $title->equals( Title::newMainPage() ) ) {
+			$whitelisted = true;
+			return;
+		}
 
-            foreach ($specialsArray as $page) {
-                if ($rootTitle->equals(SpecialPage::getTitleFor($page))) {
-                    $whitelisted = true;
-                    return;
-                }
-            }
-        }
-    }
+		$specialsArray = [
+			'CentralAutoLogin',
+			'CentralLogin',
+			'ConfirmEmail',
+			'CreateAccount',
+			'Notifications',
+			'OAuth',
+			'ResetPassword'
+		];
 
-    public function onGlobalUserPageWikis(array &$list): bool
-    {
-        $cwCacheDir = $this->options->get('CreateWikiCacheDirectory');
+		if ( $user->isAllowed( 'interwiki' ) ) {
+			$specialsArray[] = 'Interwiki';
+		}
 
-        if (file_exists("{$cwCacheDir}/databases.php")) {
-            $databasesArray = include "{$cwCacheDir}/databases.php";
+		if ( $title->isSpecialPage() ) {
+			$rootName = strtok( $title->getText(), '/' );
+			$rootTitle = Title::makeTitle( $title->getNamespace(), $rootName );
 
-            $dbList = array_keys($databasesArray['databases'] ?? []);
+			foreach ( $specialsArray as $page ) {
+				if ( $rootTitle->equals( SpecialPage::getTitleFor( $page ) ) ) {
+					$whitelisted = true;
+					return;
+				}
+			}
+		}
+	}
 
-            // Filter out those databases that don't have GlobalUserPage enabled
-            $list = array_filter($dbList, static function ($dbname) {
-                $services = MediaWikiServices::getInstance();
+	public function onGlobalUserPageWikis( array &$list ): bool {
+		$cwCacheDir = $this->options->get( 'CreateWikiCacheDirectory' );
 
-                $factory = $services->get('ManageWikiExtensionsFactory');
+		if ( file_exists( "{$cwCacheDir}/databases.php" ) ) {
+			$databasesArray = include "{$cwCacheDir}/databases.php";
 
-                $extensions = $factory->newInstance($dbname);
-                return in_array('globaluserpage', $extensions->list());
-            });
+			$dbList = array_keys( $databasesArray['databases'] ?? [] );
 
-            return false;
-        }
+			// Filter out those databases that don't have GlobalUserPage enabled
+			$list = array_filter( $dbList, static function ( $dbname ) {
+				$services = MediaWikiServices::getInstance();
 
-        return true;
-    }
+				$factory = $services->get( 'ManageWikiExtensionsFactory' );
 
-    public function onBlockIpComplete( $block, $user, $priorBlock ) {
-        $blockAlertKeywords = $this->options->get( 'WikiOasisMagicReportsBlockAlertKeywords' );
-        foreach ( $blockAlertKeywords as $keyword ) {
-            // use mb_strtolower for case insensitivity
-            if ( str_contains( mb_strtolower( $block->getReasonComment()->text ), mb_strtolower( $keyword ) ) ) {
-                $data = [
-                    'writekey' => $this->options->get( 'WikiOasisMagicReportsWriteKey' ),
-                    'username' => $block->getTargetName(),
-                    'reporter' => $user->getName(),
-                    'report' => 'people-other',
-                    'auto' => true,
-                    'evidence' => 'This is an automatic report. A user was blocked on ' . WikiMap::getCurrentWikiId() . ', and the block matched keyword "' . $keyword . '." The block ID is: ' . $block->getId() . ', and the block reason is: ' . $block->getReasonComment()->text,
-                ];
+				$extensions = $factory->newInstance( $dbname );
+				return in_array( 'globaluserpage', $extensions->list() );
+			} );
 
-                $this->httpRequestFactory->post( 'https://safety.wikioasis.org/api/report', [ 'postData' => $data ], __METHOD__ );
-                return;
-            }
-        }
-    }
+			return false;
+		}
 
-    public function onMimeMagicInit($mimeMagic)
-    {
-        $mimeMagic->addExtraTypes('text/plain txt off');
-    }
+		return true;
+	}
 
-    public function onSkinAddFooterLinks(Skin $skin, string $key, array &$footerItems)
-    {
-        /*if ( $key === 'places' ) {
-                  $footerItems['termsofservice'] = $this->addFooterLink( $skin, 'termsofservice', 'termsofservicepage' );
-                  $footerItems['donate'] = $this->addFooterLink( $skin, 'miraheze-donate', 'miraheze-donatepage' );
-              }*/
-    }
+	public function onBlockIpComplete( $block, $user, $priorBlock ) {
+		$blockAlertKeywords = $this->options->get( 'WikiOasisMagicReportsBlockAlertKeywords' );
+		foreach ( $blockAlertKeywords as $keyword ) {
+			// use mb_strtolower for case insensitivity
+			if ( str_contains( mb_strtolower( $block->getReasonComment()->text ), mb_strtolower( $keyword ) ) ) {
+				$data = [
+					'writekey' => $this->options->get( 'WikiOasisMagicReportsWriteKey' ),
+					'username' => $block->getTargetName(),
+					'reporter' => $user->getName(),
+					'report' => 'people-other',
+					'auto' => true,
+					'evidence' => 'This is an automatic report. A user was blocked on ' . WikiMap::getCurrentWikiId() . ', and the block matched keyword "' . $keyword . '." The block ID is: ' . $block->getId() . ', and the block reason is: ' . $block->getReasonComment()->text,
+				];
 
-    public function onSiteNoticeAfter(&$siteNotice, $skin)
-    {
-        $cwConfig = new GlobalVarConfig( 'cw' );
+				$this->httpRequestFactory->post( 'https://safety.wikioasis.org/api/report', [ 'postData' => $data ], __METHOD__ );
+				return;
+			}
+		}
+	}
 
-        $noticeStyle = '<div class="wikitable" style="text-align: center; width: 90%; margin-left: auto; margin-right:auto; padding: 15px; border: 4px solid black; background-color: #EEE;"> <span class="plainlinks">';
-        if ( $cwConfig->get( 'Closed' ) ) {
-            if ( $cwConfig->get( 'Private' ) ) {
-                $siteNotice .= $noticeStyle . '<img src="https://cdn.wikioasis.org/metawiki/0/02/Wiki_lock.png" align="left" style="width:80px;height:90px;">' . $skin->msg( 'sitenotice-wiki-closed-private' )->parse() . '</span></div>';
-            } elseif ( $cwConfig->get( 'Locked' ) ) {
-                $siteNotice .= $noticeStyle . '<img src="https://cdn.wikioasis.org/metawiki/0/02/Wiki_lock.png" align="left" style="width:80px;height:90px;">' . $skin->msg( 'sitenotice-wiki-closed-locked' )->parse() . '</span></div>';
-            } else {
-                $siteNotice .= $noticeStyle . '<img src="https://cdn.wikioasis.org/metawiki/0/02/Wiki_lock.png" align="left" style="width:80px;height:90px;">' . $skin->msg( 'sitenotice-wiki-closed' )->parse() . '</span></div>';
-            }
-        } elseif ( $cwConfig->get( 'Inactive' ) && $cwConfig->get( 'Inactive' ) !== 'exempt' ) {
-            $siteNotice .= $noticeStyle . '<img src="https://cdn.wikioasis.org/metawiki/2/24/Out_of_date_clock_icon.svg" align="left" style="width:80px;height:90px;">' . $skin->msg( 'sitenotice-wiki-inactive' )->parse() . '</span></div>';
-        }
-    }
+	public function onMimeMagicInit( $mimeMagic ) {
+		$mimeMagic->addExtraTypes( 'text/plain txt off' );
+	}
 
-    public function onContributionsToolLinks($id, Title $title, array &$tools, SpecialPage $specialPage)
-    {
-        $username = $title->getText();
+	public function onSkinAddFooterLinks( Skin $skin, string $key, array &$footerItems ) {
+		/*if ( $key === 'places' ) {
+				  $footerItems['termsofservice'] = $this->addFooterLink( $skin, 'termsofservice', 'termsofservicepage' );
+				  $footerItems['donate'] = $this->addFooterLink( $skin, 'miraheze-donate', 'miraheze-donatepage' );
+			  }*/
+	}
 
-        if (!IPUtils::isIPAddress($username)) {
-            $globalUserGroups = CentralAuthUser::getInstanceByName($username)->getGlobalGroups();
+	public function onSiteNoticeAfter( &$siteNotice, $skin ) {
+		$cwConfig = new GlobalVarConfig( 'cw' );
 
-            if (
-                !in_array('steward', $globalUserGroups) &&
-                !in_array('global-sysop', $globalUserGroups) &&
-                !$specialPage->getUser()->isAllowed('centralauth-lock')
-            ) {
-                return;
-            }
+			  if ( $cwConfig->get( 'Closed' ) ) {
+				  if ( $cwConfig->get( 'Private' ) ) {
+					  $siteNotice .= '<div class="wikitable" style="text-align: center; width: 90%; margin-left: auto; margin-right:auto; padding: 15px; border: 4px solid black; background-color: #EEE;"> <span class="plainlinks"> <img src="https://static.miraheze.org/metawiki/0/02/Wiki_lock.png" align="left" style="width:80px;height:90px;">' . $skin->msg( 'miraheze-sitenotice-closed-private' )->parse() . '</span></div>';
+				  } elseif ( $cwConfig->get( 'Locked' ) ) {
+					  $siteNotice .= '<div class="wikitable" style="text-align: center; width: 90%; margin-left: auto; margin-right:auto; padding: 15px; border: 4px solid black; background-color: #EEE;"> <span class="plainlinks"> <img src="https://static.miraheze.org/metawiki/5/5f/Out_of_date_clock_icon.png" align="left" style="width:80px;height:90px;">' . $skin->msg( 'miraheze-sitenotice-closed-locked' )->parse() . '</span></div>';
+				  } else {
+					  $siteNotice .= '<div class="wikitable" style="text-align: center; width: 90%; margin-left: auto; margin-right:auto; padding: 15px; border: 4px solid black; background-color: #EEE;"> <span class="plainlinks"> <img src="https://static.miraheze.org/metawiki/0/02/Wiki_lock.png" align="left" style="width:80px;height:90px;">' . $skin->msg( 'miraheze-sitenotice-closed' )->parse() . '</span></div>';
+				  }
+			  } elseif ( $cwConfig->get( 'Inactive' ) && $cwConfig->get( 'Inactive' ) !== 'exempt' ) {
+				  if ( $cwConfig->get( 'Private' ) ) {
+					  $siteNotice .= '<div class="wikitable" style="text-align: center; width: 90%; margin-left: auto; margin-right:auto; padding: 15px; border: 4px solid black; background-color: #EEE;"> <span class="plainlinks"> <img src="https://static.miraheze.org/metawiki/5/5f/Out_of_date_clock_icon.png" align="left" style="width:80px;height:90px;">' . $skin->msg( 'miraheze-sitenotice-inactive-private' )->parse() . '</span></div>';
+				  } else {
+					  $siteNotice .= '<div class="wikitable" style="text-align: center; width: 90%; margin-left: auto; margin-right:auto; padding: 15px; border: 4px solid black; background-color: #EEE;"> <span class="plainlinks"> <img src="https://static.miraheze.org/metawiki/5/5f/Out_of_date_clock_icon.png" align="left" style="width:80px;height:90px;">' . $skin->msg( 'miraheze-sitenotice-inactive' )->parse() . '</span></div>';
+				  }
+			  }
+	}
 
-            $tools['centralauth'] = Linker::makeExternalLink(
-                'https://meta.wikioasis.org/wiki/Special:CentralAuth/' . $username,
-                strtolower($specialPage->msg('centralauth')->text())
-            );
-        }
-    }
+	public function onContributionsToolLinks( $id, Title $title, array &$tools, SpecialPage $specialPage ) {
+		$username = $title->getText();
 
-    /**
+		if ( !IPUtils::isIPAddress( $username ) ) {
+			$globalUserGroups = CentralAuthUser::getInstanceByName( $username )->getGlobalGroups();
+
+			if (
+				!in_array( 'steward', $globalUserGroups ) &&
+				!in_array( 'global-sysop', $globalUserGroups ) &&
+				!$specialPage->getUser()->isAllowed( 'centralauth-lock' )
+			) {
+				return;
+			}
+
+			$tools['centralauth'] = Linker::makeExternalLink(
+				'https://meta.wikioasis.org/wiki/Special:CentralAuth/' . $username,
+				strtolower( $specialPage->msg( 'centralauth' )->text() )
+			);
+		}
+	}
+
+	/**
      * phpcs:disable MediaWiki.NamingConventions.LowerCamelFunctionsName.FunctionName
-     *
-     * @param Title $title
-     * @param string &$url
-     * @param string $query
-     */
-    public function onGetLocalURL__Internal($title, &$url, $query)
-    {
+	 *
+	 * @param Title $title
+	 * @param string &$url
+	 * @param string $query
+	 */
+	public function onGetLocalURL__Internal( $title, &$url, $query ) {
         // phpcs:enable
 
-        if (defined('MW_PHPUNIT_TEST')) {
-            return;
-        }
+		if ( defined( 'MW_PHPUNIT_TEST' ) ) {
+			return;
+		}
 
-        // If the URL contains wgScript, rewrite it to use wgArticlePath
-        if (str_contains($url, $this->options->get(MainConfigNames::Script))) {
-            $dbkey = wfUrlencode($title->getPrefixedDBkey());
-            $url = str_replace('$1', $dbkey, $this->options->get(MainConfigNames::ArticlePath));
-            if ($query !== '') {
-                $url = wfAppendQuery($url, $query);
-            }
-        }
-    }
+		// If the URL contains wgScript, rewrite it to use wgArticlePath
+		if ( str_contains( $url, $this->options->get( MainConfigNames::Script ) ) ) {
+			$dbkey = wfUrlencode( $title->getPrefixedDBkey() );
+			$url = str_replace( '$1', $dbkey, $this->options->get( MainConfigNames::ArticlePath ) );
+			if ( $query !== '' ) {
+				$url = wfAppendQuery( $url, $query );
+			}
+		}
+	}
 
-    private function addFooterLink($skin, $desc, $page)
-    {
-        if ($skin->msg($desc)->inContentLanguage()->isDisabled()) {
-            $title = null;
-        } else {
-            $title = Title::newFromText($skin->msg($page)->inContentLanguage()->text());
-        }
+	private function addFooterLink( $skin, $desc, $page ) {
+		if ( $skin->msg( $desc )->inContentLanguage()->isDisabled() ) {
+			$title = null;
+		} else {
+			$title = Title::newFromText( $skin->msg( $page )->inContentLanguage()->text() );
+		}
 
-        if (!$title) {
-            return '';
-        }
+		if ( !$title ) {
+			return '';
+		}
 
-        return Html::element(
-            'a',
-            ['href' => $title->fixSpecialName()->getLinkURL()],
-            $skin->msg($desc)->text()
-        );
-    }
+		return Html::element(
+			'a',
+			[ 'href' => $title->fixSpecialName()->getLinkURL() ],
+			$skin->msg( $desc )->text()
+		);
+	}
 
-    /** Removes redis keys for jobrunner */
-    private function removeRedisKey(string $key)
-    {
-        $jobTypeConf = $this->options->get(MainConfigNames::JobTypeConf);
-        if (!isset($jobTypeConf['default']['redisServer']) || !$jobTypeConf['default']['redisServer']) {
-            return;
-        }
+	/**
+	 * Removes redis keys for jobrunner
+	 * @suppress PhanUndeclaredClassMethod ext-redis is not installed in the CI analysis
+	 *   environment
+	 */
+	private function removeRedisKey( string $key ) {
+		$jobTypeConf = $this->options->get( MainConfigNames::JobTypeConf );
+		$default = $jobTypeConf['default'] ?? [];
+		if ( !isset( $default['redisServer'] ) || !$default['redisServer'] ) {
+			return;
+		}
 
-        $hostAndPort = IPUtils::splitHostAndPort($jobTypeConf['default']['redisServer']);
+		$hostAndPort = IPUtils::splitHostAndPort( $default['redisServer'] );
 
-        if ($hostAndPort) {
-            try {
-                $redis = new Redis();
-                $redis->connect($hostAndPort[0], $hostAndPort[1]);
-                $redis->auth($jobTypeConf['default']['redisConfig']['password']);
-                $redis->del($redis->keys($key));
-            } catch (Throwable $ex) {
-                // empty
-            }
-        }
-    }
+		if ( $hostAndPort ) {
+			try {
+				$redis = new Redis();
+				$redis->connect( $hostAndPort[0], $hostAndPort[1] );
+				$redis->auth( $default['redisConfig']['password'] ?? '' );
+				$redis->del( $redis->keys( $key ) );
+			} catch ( Throwable ) {
+				// empty
+			}
+		}
+	}
 
-    /** Remove memcached keys */
-    private function removeMemcachedKey(string $key)
-    {
-        $memcachedServers = $this->options->get('WikiOasisMemcachedServers');
+	/** Remove memcached keys */
+	private function removeMemcachedKey( string $key ) {
+		$memcachedServers = $this->options->get( 'WikiOasisMemcachedServers' );
 
-        try {
-            foreach ($memcachedServers as $memcachedServer) {
-                $memcached = new Memcached();
+		try {
+			foreach ( $memcachedServers as $memcachedServer ) {
+				$memcached = new Memcached();
 
-                $memcached->addServer($memcachedServer[0], (string) $memcachedServer[1]);
+				$memcached->addServer( $memcachedServer[0], (int)$memcachedServer[1] );
 
-                // Fetch all keys
-                $keys = $memcached->getAllKeys();
-                if (!is_array($keys)) {
-                    return;
-                }
+				// Fetch all keys
+				$keys = $memcached->getAllKeys();
+				if ( !is_array( $keys ) ) {
+					return;
+				}
 
-                foreach ($keys as $item) {
-                    // Decide which keys to delete
-                    if (preg_match("/{$key}/", $item)) {
-                        $memcached->delete($item);
-                    } else {
-                        continue;
-                    }
-                }
-            }
-        } catch (Throwable $ex) {
-            // empty
-        }
-    }
+				foreach ( $keys as $item ) {
+					// Decide which keys to delete
+					if ( preg_match( "/{$key}/", $item ) ) {
+						$memcached->delete( $item );
+					} else {
+						continue;
+					}
+				}
+			}
+		} catch ( Throwable ) {
+			// empty
+		}
+	}
 }
