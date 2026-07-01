@@ -211,7 +211,7 @@ class Main implements
         wfDebugLog('WikiOasisMagic', "Importing dump from {$filePath}");
         $originalFilePath = $importDumpRequestManager->getSplitFilePath();
 
-        if ($originalFilePath === null) {
+        if ($originalFilePath === '') {
             return;
         }
 
@@ -522,7 +522,11 @@ class Main implements
         );
     }
 
-    /** Removes redis keys for jobrunner */
+    /**
+     * Removes redis keys for jobrunner
+     * @suppress PhanUndeclaredClassReference,PhanUndeclaredClassMethod ext-redis is not
+     *   installed in the CI analysis environment
+     */
     private function removeRedisKey(string $key)
     {
         $jobTypeConf = $this->options->get(MainConfigNames::JobTypeConf);
@@ -538,7 +542,7 @@ class Main implements
                 $redis->connect($hostAndPort[0], $hostAndPort[1]);
                 $redis->auth($jobTypeConf['default']['redisConfig']['password']);
                 $redis->del($redis->keys($key));
-            } catch (Throwable $ex) {
+            } catch (Throwable) {
                 // empty
             }
         }
@@ -553,7 +557,7 @@ class Main implements
             foreach ($memcachedServers as $memcachedServer) {
                 $memcached = new Memcached();
 
-                $memcached->addServer($memcachedServer[0], (string) $memcachedServer[1]);
+                $memcached->addServer($memcachedServer[0], (int) $memcachedServer[1]);
 
                 // Fetch all keys
                 $keys = $memcached->getAllKeys();
@@ -570,7 +574,7 @@ class Main implements
                     }
                 }
             }
-        } catch (Throwable $ex) {
+        } catch (Throwable) {
             // empty
         }
     }
