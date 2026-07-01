@@ -522,11 +522,7 @@ class Main implements
         );
     }
 
-    /**
-     * Removes redis keys for jobrunner
-     * @suppress PhanUndeclaredClassReference,PhanUndeclaredClassMethod ext-redis is not
-     *   installed in the CI analysis environment
-     */
+    /** Removes redis keys for jobrunner */
     private function removeRedisKey(string $key)
     {
         $jobTypeConf = $this->options->get(MainConfigNames::JobTypeConf);
