@@ -36,8 +36,8 @@ use function Sentry\startTransaction;
  * The job runner pops, runs and (on success, or when retries are exhausted)
  * acknowledges a single job at a time within one process. We rely on that ordering:
  * a job whose `queue.process` transaction is still open when the next job is popped,
- * or when the process shuts down, was never acknowledged — i.e. a retryable failure
- * or a crash — and is reported as an error.
+ * or when the process shuts down, was never acknowledged - i.e. a retryable failure
+ * or a crash - and is reported as an error.
  *
  * All Sentry calls are no-ops unless a Sentry client has been initialised, so this
  * class is safe to use on wikis where Sentry is not configured.
