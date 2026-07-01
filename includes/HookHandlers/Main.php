@@ -524,8 +524,8 @@ class Main implements
 
     /**
      * Removes redis keys for jobrunner
-     * @suppress PhanUndeclaredClassReference,PhanUndeclaredClassMethod ext-redis is not
-     *   installed in the CI analysis environment
+     * @suppress PhanUndeclaredClassMethod ext-redis is not installed in the CI analysis
+     *   environment
      */
     private function removeRedisKey(string $key)
     {

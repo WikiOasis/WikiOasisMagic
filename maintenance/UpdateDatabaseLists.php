@@ -38,7 +38,7 @@ class GenerateDatabaseLists extends Maintenance {
     }
 
     /**
-     * @suppress PhanUndeclaredStaticMethod,PhanEmptyForeach MirahezeFunctions is provided
+     * @suppress PhanUndeclaredClassMethod,PhanEmptyForeach MirahezeFunctions is provided
      *   by the WikiOasis/mw-config site configuration required in by LocalSettings.php,
      *   not a MediaWiki extension CI can clone, so phan can't see it populates
      *   $databaseLists by reference
@@ -57,7 +57,7 @@ class GenerateDatabaseLists extends Maintenance {
     }
 
     /**
-     * @suppress PhanUndeclaredStaticMethod MirahezeFunctions is provided by the
+     * @suppress PhanUndeclaredClassMethod MirahezeFunctions is provided by the
      *   WikiOasis/mw-config site configuration required in by LocalSettings.php,
      *   not a MediaWiki extension CI can clone
      */
