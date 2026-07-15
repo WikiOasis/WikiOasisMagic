@@ -154,13 +154,17 @@
 			"value": ""
 		}
 	},
+	"ResourceFileModulePaths": {
+		"localBasePath": "modules",
+		"remoteExtPath": "WikiOasisMagic/modules"
+	},
 	"ResourceModules": {
 		"ext.wikioasismagic.simpleBlogPageFix": {
 			"scripts": [
-				"modules/ext.wikioasismagic.simpleBlogPageFix.js"
+				"ext.wikioasismagic.simpleBlogPageFix.js"
 			],
 			"dependencies": [
-				"ext.OOJSPlus.data"
+				"ext.oOJSPlus.data"
 			]
 		}
 	},
