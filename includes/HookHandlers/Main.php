@@ -11,8 +11,8 @@ use MediaWiki\Config\ServiceOptions;
 use MediaWiki\Extension\AbuseFilter\AbuseFilterServices;
 use MediaWiki\Extension\AbuseFilter\Hooks\AbuseFilterShouldFilterActionHook;
 use MediaWiki\Extension\AbuseFilter\Variables\VariableHolder;
-use MediaWiki\Hook\BeforePageDisplayHook;
 use MediaWiki\Extension\CentralAuth\User\CentralAuthUser;
+use MediaWiki\Hook\BeforePageDisplayHook;
 use MediaWiki\Hook\BlockIpCompleteHook;
 use MediaWiki\Hook\ContributionsToolLinksHook;
 use MediaWiki\Hook\GetLocalURL__InternalHook;
@@ -47,7 +47,7 @@ use Wikimedia\IPUtils;
 use Wikimedia\Rdbms\ILBFactory;
 
 class Main implements
-    BeforePageDisplayHook,
+	BeforePageDisplayHook,
 	AbuseFilterShouldFilterActionHook,
 	BlockIpCompleteHook,
 	ContributionsToolLinksHook,
