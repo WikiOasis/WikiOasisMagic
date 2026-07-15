@@ -346,27 +346,6 @@ class Main implements
 		}
 
 		$specialsArray = [
-    /**
-     * Load the SimpleBlogPage + OOJSPlus paginator compatibility shim when
-     * the SimpleBlogPage extension is active.
-     *
-     * SimpleBlogPage's BlogList panel calls `this.paginator.init()` after the
-     * data store resolves, but older OOJSPlus versions do not expose that
-     * method, causing: TypeError: this.paginator.init is not a function.
-     * The shim adds a no-op `init()` to the Paginator prototype if absent.
-     *
-     * @param OutputPage $out
-     * @param Skin $skin
-     */
-    public function onBeforePageDisplay( $out, $skin ): void {
-        if ( \MediaWiki\MediaWikiServices::getInstance()
-            ->getExtensionRegistry()
-            ->isLoaded( 'SimpleBlogPage' )
-        ) {
-            $out->addModules( [ 'ext.wikioasismagic.simpleBlogPageFix' ] );
-        }
-    }
-
 			'CentralAutoLogin',
 			'CentralLogin',
 			'ConfirmEmail',
@@ -390,6 +369,27 @@ class Main implements
 					return;
 				}
 			}
+		}
+	}
+
+	/**
+	 * Load the SimpleBlogPage + OOJSPlus paginator compatibility shim when
+	 * the SimpleBlogPage extension is active.
+	 *
+	 * SimpleBlogPage's BlogList panel calls `this.paginator.init()` after the
+	 * data store resolves, but older OOJSPlus versions do not expose that
+	 * method, causing: TypeError: this.paginator.init is not a function.
+	 * The shim adds a no-op `init()` to the Paginator prototype if absent.
+	 *
+	 * @param OutputPage $out
+	 * @param Skin $skin
+	 */
+	public function onBeforePageDisplay( $out, $skin ): void {
+		if ( MediaWikiServices::getInstance()
+			->getExtensionRegistry()
+			->isLoaded( 'SimpleBlogPage' )
+		) {
+			$out->addModules( [ 'ext.wikioasismagic.simpleBlogPageFix' ] );
 		}
 	}
 
