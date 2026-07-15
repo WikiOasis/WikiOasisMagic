@@ -103,6 +103,9 @@
 		},
 		"TitleReadWhitelist": {
 			"handler": "Main"
+		},
+		"BeforePageDisplay": {
+			"handler": "Main"
 		}
     },
 	"HookHandlers": {
@@ -149,6 +152,16 @@
 			"description": "Cloudflare Zone ID for this wiki's domain.",
 			"public": false,
 			"value": ""
+		}
+	},
+	"ResourceModules": {
+		"ext.wikioasismagic.simpleBlogPageFix": {
+			"scripts": [
+				"modules/ext.wikioasismagic.simpleBlogPageFix.js"
+			],
+			"dependencies": [
+				"ext.OOJSPlus.data"
+			]
 		}
 	},
 	"JobClasses": {

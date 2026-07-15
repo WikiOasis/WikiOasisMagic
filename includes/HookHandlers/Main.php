@@ -11,6 +11,7 @@ use MediaWiki\Config\ServiceOptions;
 use MediaWiki\Extension\AbuseFilter\AbuseFilterServices;
 use MediaWiki\Extension\AbuseFilter\Hooks\AbuseFilterShouldFilterActionHook;
 use MediaWiki\Extension\AbuseFilter\Variables\VariableHolder;
+use MediaWiki\Hook\BeforePageDisplayHook;
 use MediaWiki\Extension\CentralAuth\User\CentralAuthUser;
 use MediaWiki\Hook\BlockIpCompleteHook;
 use MediaWiki\Hook\ContributionsToolLinksHook;
@@ -21,6 +22,7 @@ use MediaWiki\Hook\SkinAddFooterLinksHook;
 use MediaWiki\Html\Html;
 use MediaWiki\Http\HttpRequestFactory;
 use MediaWiki\Linker\Linker;
+use MediaWiki\Output\OutputPage;
 use MediaWiki\MainConfigNames;
 use MediaWiki\MediaWikiServices;
 use MediaWiki\Permissions\Hook\TitleReadWhitelistHook;
@@ -45,6 +47,7 @@ use Wikimedia\IPUtils;
 use Wikimedia\Rdbms\ILBFactory;
 
 class Main implements
+    BeforePageDisplayHook,
 	AbuseFilterShouldFilterActionHook,
 	BlockIpCompleteHook,
 	ContributionsToolLinksHook,
@@ -343,6 +346,27 @@ class Main implements
 		}
 
 		$specialsArray = [
+    /**
+     * Load the SimpleBlogPage + OOJSPlus paginator compatibility shim when
+     * the SimpleBlogPage extension is active.
+     *
+     * SimpleBlogPage's BlogList panel calls `this.paginator.init()` after the
+     * data store resolves, but older OOJSPlus versions do not expose that
+     * method, causing: TypeError: this.paginator.init is not a function.
+     * The shim adds a no-op `init()` to the Paginator prototype if absent.
+     *
+     * @param OutputPage $out
+     * @param Skin $skin
+     */
+    public function onBeforePageDisplay( $out, $skin ): void {
+        if ( \MediaWiki\MediaWikiServices::getInstance()
+            ->getExtensionRegistry()
+            ->isLoaded( 'SimpleBlogPage' )
+        ) {
+            $out->addModules( [ 'ext.wikioasismagic.simpleBlogPageFix' ] );
+        }
+    }
+
 			'CentralAutoLogin',
 			'CentralLogin',
 			'ConfirmEmail',
