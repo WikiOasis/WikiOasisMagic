@@ -51,9 +51,14 @@ class GenerateWikiOasisSitemap extends Maintenance {
 		$isPrivate = $remoteWiki->isPrivate();
 
 		$bucket = $wgAWSBucketName ?? '';
-		$prefix = strtolower( $dbname ) . '/sitemaps/';
+		$prefix = 'sitemaps/' . strtolower( $dbname ) . '/';
+		// Layout used before sitemaps were moved under a shared sitemaps/ prefix.
+		$legacyPrefix = strtolower( $dbname ) . '/sitemaps/';
 
 		$s3 = $this->getS3Client();
+
+		// Always clear the old location so it does not serve stale sitemaps.
+		$this->deleteS3Prefix( $s3, $bucket, $legacyPrefix );
 
 		if ( $isPrivate ) {
 			$this->output( "Deleting sitemaps for private wiki {$dbname}\n" );
@@ -73,14 +78,21 @@ class GenerateWikiOasisSitemap extends Maintenance {
 			mkdir( $tempDir, 0755, true );
 		}
 
-		$wikiServer = $this->getConfig()->get( MainConfigNames::Server );
-
 		$generateSitemap = $this->createChild( GenerateSitemap::class );
 		$generateSitemap->setOption( 'fspath', $tempDir );
-		$generateSitemap->setOption( 'urlpath', "/{$prefix}" );
-		$generateSitemap->setOption( 'server', $wikiServer );
+		// Pin the identifier so the generated filenames are predictable; core would
+		// otherwise use the wiki's DB domain, which can carry a table prefix.
+		$generateSitemap->setOption( 'identifier', $dbname );
 		$generateSitemap->setOption( 'compress', 'no' );
 		$generateSitemap->execute();
+
+		// Core builds the index <loc> entries from $wgCanonicalServer (the wiki's own
+		// domain, custom or not), but the files only ever exist in the bucket. Point
+		// them at where they are actually uploaded.
+		$this->rewriteIndexUrls(
+			$tempDir . '/sitemap-index-' . rawurlencode( $dbname ) . '.xml',
+			$urlBase
+		);
 
 		foreach ( glob( $tempDir . "/sitemap-*{$dbname}*" ) ?: [] as $file ) {
 			if ( !is_file( $file ) ) {
@@ -101,7 +113,38 @@ class GenerateWikiOasisSitemap extends Maintenance {
 			unlink( $file );
 		}
 
-		$this->output( "Sitemap index: {$urlBase}sitemap-index-{$dbname}.xml\n" );
+		$indexName = 'sitemap-index-' . rawurlencode( $dbname ) . '.xml';
+		$this->output( "Sitemap index: {$urlBase}{$indexName}\n" );
+	}
+
+	/**
+	 * Rewrite every <loc> in the sitemap index to the bucket URL the sitemap
+	 * files are uploaded to, preserving each entry's filename.
+	 */
+	private function rewriteIndexUrls( string $indexFile, string $urlBase ): void {
+		if ( !is_file( $indexFile ) ) {
+			$this->output( "Sitemap index {$indexFile} not found; skipping URL rewrite.\n" );
+			return;
+		}
+
+		$xml = file_get_contents( $indexFile );
+		if ( $xml === false ) {
+			$this->output( "Failed to read sitemap index {$indexFile}.\n" );
+			return;
+		}
+
+		$rewritten = preg_replace_callback(
+			'#<loc>(.*?)</loc>#s',
+			static function ( array $matches ) use ( $urlBase ): string {
+				$filename = basename( htmlspecialchars_decode( $matches[1], ENT_QUOTES ) );
+				return '<loc>' . htmlspecialchars( $urlBase . $filename, ENT_QUOTES ) . '</loc>';
+			},
+			$xml
+		);
+
+		if ( $rewritten === null || file_put_contents( $indexFile, $rewritten ) === false ) {
+			$this->output( "Failed to rewrite sitemap index {$indexFile}.\n" );
+		}
 	}
 
 	private function resolveBucketDomain( string $awsBucketDomain, string $bucket ): string {
