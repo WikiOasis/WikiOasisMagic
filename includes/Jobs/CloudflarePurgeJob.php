@@ -2,12 +2,20 @@
 
 namespace WikiOasis\WikiOasisMagic\Jobs;
 
-use GuzzleHttp\Exception\RequestException;
 use Job;
 use MediaWiki\JobQueue\GenericParameterJob;
-use MediaWiki\Logger\LoggerFactory;
 use MediaWiki\MediaWikiServices;
+use WikiOasis\WikiOasisMagic\CloudflarePurger;
 
+/**
+ * Transitional no-longer-pushed job that purges the Cloudflare cache.
+ *
+ * Purging now happens in a deferred update in
+ * {@see \WikiOasis\WikiOasisMagic\HookHandlers\CloudflarePurge}, so nothing
+ * enqueues this any more. It is kept, and kept registered in $wgJobClasses, only
+ * so that jobs still sitting in the queue at deploy time drain rather than
+ * failing to instantiate. Safe to delete once the queue is empty.
+ */
 class CloudflarePurgeJob extends Job implements GenericParameterJob {
 
 	public function __construct( array $params ) {
@@ -16,48 +24,16 @@ class CloudflarePurgeJob extends Job implements GenericParameterJob {
 
 	public function run(): bool {
 		$services = MediaWikiServices::getInstance();
-		$config = $services->getMainConfig();
-		$logger = LoggerFactory::getInstance( 'WikiOasisMagic' );
+		$purger = new CloudflarePurger(
+			$services->getMainConfig(),
+			$services->getHttpRequestFactory()
+		);
 
-		$apiToken = $config->get( 'WikiOasisMagicCloudflareAPIToken' );
-		$zoneID = $config->get( 'WikiOasisMagicCloudflareZoneID' );
-		$urls = $this->params['urls'] ?? [];
-
-		if ( !$apiToken || !$zoneID ) {
-			$logger->debug( 'Cloudflare purge skipped: credentials not configured', [
-				'urls' => $urls,
-			] );
-			return true;
-		}
-
-		$logger->info( 'Cloudflare purge job running', [
-			'urls' => $urls,
-		] );
-
-		$guzzleClient = $services->getHttpRequestFactory()->createGuzzleClient();
-
-		try {
-			$response = $guzzleClient->post(
-				"https://api.cloudflare.com/client/v4/zones/{$zoneID}/purge_cache",
-				[
-					'headers' => [
-						'Authorization' => "Bearer {$apiToken}",
-						'Content-Type' => 'application/json',
-					],
-					'json' => [ 'files' => $urls ],
-				]
-			);
-			$logger->info( 'Cloudflare purge succeeded', [
-				'urls' => $urls,
-				'httpStatus' => $response->getStatusCode(),
-			] );
-			return true;
-		} catch ( RequestException $e ) {
-			$logger->error( 'Cloudflare purge failed', [
-				'urls' => $urls,
-				'error' => $e->getMessage(),
-			] );
+		if ( !$purger->purge( $this->params, 'CloudflarePurgeJob' ) ) {
+			$this->setLastError( 'Cloudflare purge failed' );
 			return false;
 		}
+
+		return true;
 	}
 }
