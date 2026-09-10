@@ -2,7 +2,7 @@
 
 namespace WikiOasis\WikiOasisMagic;
 
-use GuzzleHttp\Exception\RequestException;
+use GuzzleHttp\Exception\TransferException;
 use MediaWiki\Config\Config;
 use MediaWiki\Http\HttpRequestFactory;
 use MediaWiki\Logger\LoggerFactory;
@@ -112,7 +112,10 @@ class CloudflarePurger {
 				'httpStatus' => $response->getStatusCode(),
 			] );
 			return true;
-		} catch ( RequestException $e ) {
+		} catch ( TransferException $e ) {
+			// TransferException, not RequestException: in Guzzle 7 ConnectException
+			// extends TransferException directly rather than RequestException, so a
+			// connect or DNS timeout escaped this handler instead of being logged.
 			$logger->error( 'Cloudflare purge failed', [
 				'hook' => $hook,
 				'purge' => $body,
