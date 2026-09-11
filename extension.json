@@ -77,6 +77,9 @@
 		"CreateWikiTables": {
 			"handler": "Main"
 		},
+		"UserGetRightsRemove": {
+			"handler": "Main"
+		},
 		"GetLocalURL::Internal": {
 			"handler": "Main"
 		},
@@ -138,6 +141,10 @@
 		}
 	},
 	"config": {
+		"WikiOasisMagicAccessIdsMap": {
+			"description": "Array. Map of wiki database names to an array of CentralAuth user IDs which are allowed to read that wiki. Users not in the list have the read right removed.",
+			"value": {}
+		},
 		"WikiOasisMagicMemcachedServers": {
 			"description": "Array. Memcached servers to use for clearing memcached keys when a wiki is deleted or renamed.",
 			"value": []
