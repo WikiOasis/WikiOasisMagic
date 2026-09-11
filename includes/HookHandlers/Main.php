@@ -27,6 +27,7 @@ use MediaWiki\MainConfigNames;
 use MediaWiki\MediaWikiServices;
 use MediaWiki\Output\OutputPage;
 use MediaWiki\Permissions\Hook\TitleReadWhitelistHook;
+use MediaWiki\Permissions\Hook\UserGetRightsRemoveHook;
 use MediaWiki\Shell\Shell;
 use MediaWiki\SpecialPage\SpecialPage;
 use MediaWiki\Title\Title;
@@ -63,7 +64,8 @@ class Main implements
 	MimeMagicInitHook,
 	SiteNoticeAfterHook,
 	SkinAddFooterLinksHook,
-	TitleReadWhitelistHook
+	TitleReadWhitelistHook,
+	UserGetRightsRemoveHook
 {
 
 	/** @var ServiceOptions */
@@ -117,6 +119,7 @@ class Main implements
 			new ServiceOptions(
 				[
 					'ArticlePath',
+					'WikiOasisMagicAccessIdsMap',
 					'CreateWikiCacheDirectory',
 					'EchoSharedTrackingDB',
 					'JobTypeConf',
@@ -349,11 +352,14 @@ class Main implements
 		$specialsArray = [
 			'CentralAutoLogin',
 			'CentralLogin',
+			'ChangePassword',
 			'ConfirmEmail',
 			'CreateAccount',
 			'Notifications',
 			'OAuth',
-			'ResetPassword'
+			'PasswordReset',
+			'Userlogin',
+			'Userlogout'
 		];
 
 		if ( $user->isAllowed( 'interwiki' ) ) {
@@ -370,6 +376,31 @@ class Main implements
 					return;
 				}
 			}
+		}
+	}
+
+	/**
+	 * @param User $user
+	 * @param array &$rights
+	 */
+	public function onUserGetRightsRemove( $user, &$rights ) {
+		foreach ( $this->options->get( 'WikiOasisMagicAccessIdsMap' ) as $wiki => $ids ) {
+			if ( !WikiMap::isCurrentWikiId( $wiki ) ) {
+				continue;
+			}
+
+			if ( !$user->isRegistered() ) {
+				$rights = array_values( array_diff( $rights, [ 'read' ] ) );
+				continue;
+			}
+
+			$centralAuthUser = CentralAuthUser::getInstance( $user );
+			$allowedIds = array_map( 'intval', (array)$ids );
+			if ( $centralAuthUser->exists() && in_array( (int)$centralAuthUser->getId(), $allowedIds, true ) ) {
+				continue;
+			}
+
+			$rights = array_values( array_diff( $rights, [ 'read' ] ) );
 		}
 	}
 
