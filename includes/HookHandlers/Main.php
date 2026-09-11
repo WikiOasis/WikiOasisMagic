@@ -395,7 +395,8 @@ class Main implements
 			}
 
 			$centralAuthUser = CentralAuthUser::getInstance( $user );
-			if ( $centralAuthUser->exists() && in_array( $centralAuthUser->getId(), $ids, true ) ) {
+			$allowedIds = array_map( 'intval', (array)$ids );
+			if ( $centralAuthUser->exists() && in_array( (int)$centralAuthUser->getId(), $allowedIds, true ) ) {
 				continue;
 			}
 
