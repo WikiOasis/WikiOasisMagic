@@ -25,8 +25,8 @@ namespace WikiOasis\WikiOasisMagic\Maintenance;
  */
 
 use MediaWiki\Maintenance\Maintenance;
-use MirahezeFunctions;
 use Wikimedia\StaticArrayWriter;
+use WikiOasisFunctions;
 
 class GenerateDatabaseLists extends Maintenance {
 
@@ -36,7 +36,7 @@ class GenerateDatabaseLists extends Maintenance {
 	}
 
 	/**
-	 * @suppress PhanUndeclaredClassMethod,PhanEmptyForeach MirahezeFunctions is provided
+	 * @suppress PhanUndeclaredClassMethod,PhanEmptyForeach WikiOasisFunctions is provided
 	 *   by the WikiOasis/mw-config site configuration required in by LocalSettings.php,
 	 *   not a MediaWiki extension CI can clone, so phan can't see it populates
 	 *   $databaseLists by reference
@@ -44,8 +44,8 @@ class GenerateDatabaseLists extends Maintenance {
 	public function execute() {
 		$databaseLists = [];
 
-		// Populate from MirahezeFunctions
-		MirahezeFunctions::onGenerateDatabaseLists( $databaseLists );
+		// Populate from WikiOasisFunctions
+		WikiOasisFunctions::onGenerateDatabaseLists( $databaseLists );
 
 		foreach ( $databaseLists as $listName => $listData ) {
 			$this->writeCacheFile( $listName, $listData );
@@ -55,12 +55,12 @@ class GenerateDatabaseLists extends Maintenance {
 	}
 
 	/**
-	 * @suppress PhanUndeclaredClassMethod MirahezeFunctions is provided by the
+	 * @suppress PhanUndeclaredClassMethod WikiOasisFunctions is provided by the
 	 *   WikiOasis/mw-config site configuration required in by LocalSettings.php,
 	 *   not a MediaWiki extension CI can clone
 	 */
 	private function writeCacheFile( string $listName, array $data ): void {
-		$cacheDir = MirahezeFunctions::getCacheDirectory();
+		$cacheDir = WikiOasisFunctions::getCacheDirectory();
 		$fileName = "$cacheDir/$listName.php";
 
 		$cacheData = [
