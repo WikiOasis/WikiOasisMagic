@@ -47,7 +47,7 @@ class UpgradeGroups {
 	 *   not a MediaWiki extension CI can clone
 	 */
 	public function __construct( ?string $cacheDirectory = null, string $prefix = self::DEFAULT_PREFIX ) {
-		$this->cacheDirectory = rtrim( $cacheDirectory ?? WikiOasisFunctions::getCacheDirectory(), '/' );
+		$this->cacheDirectory = rtrim( (string)( $cacheDirectory ?? WikiOasisFunctions::getCacheDirectory() ), '/' );
 		$this->prefix = $prefix;
 	}
 

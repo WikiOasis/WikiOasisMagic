@@ -425,6 +425,8 @@ class UpgradeWiki extends Maintenance {
 	 * Wait up to a second for output from the running children, and print every
 	 * complete line prefixed with its wiki. Pipes that reached EOF are closed and
 	 * removed, so a child whose 'pipes' is empty has exited.
+	 *
+	 * @param array<string,array{process:resource,pipes:array<int,resource>,buffers:array<int,string>}> &$running
 	 */
 	private function pumpChildOutput( array &$running ): void {
 		$read = [];
@@ -444,20 +446,21 @@ class UpgradeWiki extends Maintenance {
 			return;
 		}
 
-		foreach ( $running as $wiki => &$child ) {
-			foreach ( $child['pipes'] as $fd => $pipe ) {
+		foreach ( array_keys( $running ) as $wiki ) {
+			foreach ( $running[$wiki]['pipes'] as $fd => $pipe ) {
 				if ( !in_array( $pipe, $read, true ) ) {
 					continue;
 				}
 
+				$buffer = $running[$wiki]['buffers'][$fd] ?? '';
 				$chunk = fread( $pipe, 65536 );
-				if ( $chunk !== false && $chunk !== '' ) {
-					$child['buffers'][$fd] .= $chunk;
+				if ( $chunk !== false ) {
+					$buffer .= $chunk;
 				}
 
 				$eof = feof( $pipe );
-				$lines = explode( "\n", $child['buffers'][$fd] );
-				$child['buffers'][$fd] = $eof ? '' : array_pop( $lines );
+				$lines = explode( "\n", $buffer );
+				$running[$wiki]['buffers'][$fd] = $eof ? '' : (string)array_pop( $lines );
 
 				foreach ( $lines as $line ) {
 					if ( $line === '' && $eof ) {
@@ -473,12 +476,10 @@ class UpgradeWiki extends Maintenance {
 
 				if ( $eof ) {
 					fclose( $pipe );
-					unset( $child['pipes'][$fd] );
+					unset( $running[$wiki]['pipes'][$fd] );
 				}
 			}
 		}
-
-		unset( $child );
 	}
 
 	private function upgradeWiki( string $wiki, array $json, string $updateKey ): bool {
