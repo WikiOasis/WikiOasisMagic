@@ -157,7 +157,6 @@ class ManageUpgradeGroups extends Maintenance {
 			$this->getOption( 'group-prefix', UpgradeGroups::DEFAULT_PREFIX )
 		);
 
-		// Duplicates make a staged rollout meaningless, so shout about them on every run.
 		$this->reportDuplicates();
 
 		if ( $this->hasOption( 'delete-group' ) ) {
@@ -165,7 +164,6 @@ class ManageUpgradeGroups extends Maintenance {
 			return;
 		}
 
-		// --file on its own, with a --group, means "add the wikis in this file".
 		$fileOnlyAdd = $this->hasOption( 'file' ) &&
 			!$this->hasOption( 'add' ) &&
 			!$this->hasOption( 'remove' ) &&
@@ -268,7 +266,6 @@ class ManageUpgradeGroups extends Maintenance {
 	private function removeDuplicates( array $duplicates ): void {
 		$toRemove = [];
 		foreach ( $duplicates as $wiki => $groups ) {
-			// Keep the first group the wiki landed in, it is the earliest rollout stage.
 			foreach ( array_slice( $groups, 1 ) as $group ) {
 				$toRemove[$group][] = (string)$wiki;
 			}

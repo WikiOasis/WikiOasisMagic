@@ -88,9 +88,6 @@ class ChangeMediaWikiVersion extends Maintenance {
 			$remoteWiki = $remoteWikiFactory->newInstance( $dbname );
 			$remoteWiki->disableResetDatabaseLists();
 
-			// Read the version off the row just loaded rather than through
-			// WikiOasisFunctions::getMediaWikiVersion(), which re-includes the whole
-			// databases list for every wiki and reflects the cache, not the database.
 			$oldVersion = $this->resolveVersion(
 				(string)( $remoteWiki->getExtraFieldData( 'mediawiki-version', $defaultVersion ) ?: $defaultVersion )
 			);
@@ -134,8 +131,6 @@ class ChangeMediaWikiVersion extends Maintenance {
 			return;
 		}
 
-		// One regeneration for the whole batch. isNewChanges bumps the global
-		// timestamp, so every other server regenerates its copy once as well.
 		$this->output( "Regenerating database lists for $changed changed wiki(s)\n" );
 
 		$dataStore = $this->getServiceContainer()->get( 'CreateWikiDataStore' );

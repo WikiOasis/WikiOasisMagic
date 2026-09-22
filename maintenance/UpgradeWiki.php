@@ -166,8 +166,6 @@ class UpgradeWiki extends Maintenance {
 			try {
 				$alreadyUpgraded = !$this->hasOption( 'force' ) && $this->hasAlreadyUpgraded( $wiki, $updateKey );
 			} catch ( Throwable $t ) {
-				// Let the wiki's own upgrade run hit this properly, and log it, rather
-				// than abort the whole batch over one unreachable database.
 				$this->error( "Warning: could not read the updatelog of '$wiki': {$t->getMessage()}" );
 				$alreadyUpgraded = false;
 			}
@@ -205,8 +203,6 @@ class UpgradeWiki extends Maintenance {
 		if ( $pending !== [] ) {
 			$currentWiki = $this->getConfig()->get( MainConfigNames::DBname );
 			if ( $pending === [ $currentWiki ] ) {
-				// The only wiki to upgrade is the one this process was booted for, so
-				// there is no need to pay for booting another process.
 				$this->currentWiki = $currentWiki;
 				if ( $this->upgradeWiki( $currentWiki, $json, $updateKey ) ) {
 					$upgraded[] = $currentWiki;
@@ -461,7 +457,6 @@ class UpgradeWiki extends Maintenance {
 
 				$eof = feof( $pipe );
 				$lines = explode( "\n", $child['buffers'][$fd] );
-				// The last piece is an incomplete line unless the stream has ended.
 				$child['buffers'][$fd] = $eof ? '' : array_pop( $lines );
 
 				foreach ( $lines as $line ) {

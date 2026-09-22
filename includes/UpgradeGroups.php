@@ -125,8 +125,6 @@ class UpgradeGroups {
 			return [];
 		}
 
-		// The file may have been rewritten by another process since this one
-		// compiled it, so never trust a stale compiled copy.
 		if ( function_exists( 'opcache_invalidate' ) ) {
 			opcache_invalidate( $file, true );
 		}
@@ -137,7 +135,6 @@ class UpgradeGroups {
 		}
 
 		$databases = $data['databases'];
-		// Lists are normally keyed by database name, but tolerate a plain list of names.
 		$wikis = array_is_list( $databases ) ? $databases : array_keys( $databases );
 
 		return array_values( array_unique( array_map( 'strval', $wikis ) ) );
@@ -220,7 +217,6 @@ class UpgradeGroups {
 			throw new RuntimeException( "Cache directory does not exist: {$this->cacheDirectory}" );
 		}
 
-		// Write through a temporary file so a reader never sees a half-written list.
 		$temporary = $file . '.tmp' . getmypid();
 		if ( file_put_contents( $temporary, $contents ) === false ) {
 			throw new RuntimeException( "Failed to write database list: $temporary" );
