@@ -108,13 +108,25 @@ class UpgradeGroups {
 	 * @return string[]
 	 */
 	public function getWikis( string $group ): array {
-		$file = $this->getFilePath( $group );
+		return $this->readList( $group );
+	}
+
+	/**
+	 * Database names in any cw_cache database list, such as a group or one of the
+	 * lists CreateWiki generates (active, closed, inactive, deleted, public,
+	 * private, databases).
+	 *
+	 * @return string[]
+	 */
+	public function readList( string $name ): array {
+		$this->assertValidListName( $name );
+		$file = $this->cacheDirectory . '/' . $name . '.php';
 		if ( !file_exists( $file ) ) {
 			return [];
 		}
 
-		// The file was rewritten by another process earlier in this run, so never
-		// trust a stale compiled copy of it.
+		// The file may have been rewritten by another process since this one
+		// compiled it, so never trust a stale compiled copy.
 		if ( function_exists( 'opcache_invalidate' ) ) {
 			opcache_invalidate( $file, true );
 		}
@@ -129,6 +141,11 @@ class UpgradeGroups {
 		$wikis = array_is_list( $databases ) ? $databases : array_keys( $databases );
 
 		return array_values( array_unique( array_map( 'strval', $wikis ) ) );
+	}
+
+	public function listExists( string $name ): bool {
+		$this->assertValidListName( $name );
+		return file_exists( $this->cacheDirectory . '/' . $name . '.php' );
 	}
 
 	/**
@@ -233,13 +250,26 @@ class UpgradeGroups {
 		return $deleted;
 	}
 
+	/**
+	 * Groups are always "<prefix><number>". cw_cache also holds CreateWiki's own
+	 * lists and a cache file per wiki named after its database, so anything looser
+	 * could overwrite one of those.
+	 */
 	public function isValidGroupName( string $group ): bool {
-		return (bool)preg_match( '/^[A-Za-z0-9._-]+$/', $group ) && !str_contains( $group, '..' );
+		return (bool)preg_match( '/^' . preg_quote( $this->prefix, '/' ) . '[0-9]+$/', $group );
 	}
 
 	private function assertValidGroupName( string $group ): void {
 		if ( !$this->isValidGroupName( $group ) ) {
-			throw new InvalidArgumentException( "Invalid group name: $group" );
+			throw new InvalidArgumentException(
+				"Invalid group name: $group (groups must be named {$this->prefix}<number>)"
+			);
+		}
+	}
+
+	private function assertValidListName( string $name ): void {
+		if ( !preg_match( '/^[A-Za-z0-9_-]+$/', $name ) ) {
+			throw new InvalidArgumentException( "Invalid database list name: $name" );
 		}
 	}
 }

@@ -33,7 +33,16 @@ use WikiOasis\WikiOasisMagic\UpgradeGroups;
 
 class ManageUpgradeGroups extends Maintenance {
 
+	/**
+	 * Wiki states that can be selected on, each backed by the cw_cache database
+	 * list CreateWiki generates with the same name.
+	 */
+	private const STATES = [ 'active', 'closed', 'inactive', 'deleted', 'public', 'private' ];
+
 	private UpgradeGroups $groups;
+
+	/** @var ?string[] */
+	private ?array $pool = null;
 
 	public function __construct() {
 		parent::__construct();
@@ -55,7 +64,37 @@ class ManageUpgradeGroups extends Maintenance {
 		$this->addOption(
 			'percent',
 			'Create or top up a group so that the groups together cover this percentage of ' .
-				'all wikis. Wikis already in a group are never listed again.',
+				'the selected wikis (all wikis, or those matching --state). Wikis already in a ' .
+				'group are never listed again.',
+			false,
+			true
+		);
+
+		$this->addOption(
+			'count',
+			'Create or top up a group with this many more of the selected wikis that are in no group yet.',
+			false,
+			true
+		);
+
+		$this->addOption(
+			'add-all',
+			'Create or top up a group with every selected wiki that is in no group yet, ' .
+				'e.g. --add-all --state private.'
+		);
+
+		$this->addOption(
+			'state',
+			'Only select wikis in all of these comma separated states: ' .
+				implode( ', ', self::STATES ) . '. Applies to --percent, --count, --add-all, ' .
+				'--list and --check.',
+			false,
+			true
+		);
+
+		$this->addOption(
+			'exclude-state',
+			'Leave out wikis in any of these comma separated states.',
 			false,
 			true
 		);
@@ -66,7 +105,7 @@ class ManageUpgradeGroups extends Maintenance {
 
 		$this->addOption(
 			'group',
-			'Group to act on, e.g. group1. Defaults to a new group for --percent.',
+			'Group to act on, e.g. group1. Defaults to a new group for --percent, --count and --add-all.',
 			false,
 			true
 		);
@@ -83,7 +122,10 @@ class ManageUpgradeGroups extends Maintenance {
 			'With --add, move wikis that are already in another group instead of refusing them.'
 		);
 
-		$this->addOption( 'random', 'With --percent, pick wikis at random rather than in name order.' );
+		$this->addOption(
+			'random',
+			'With --percent or --count, pick wikis at random rather than in name order.'
+		);
 		$this->addOption( 'seed', 'Seed for --random, so a selection can be reproduced.', false, true );
 		$this->addOption(
 			'skip-validation',
@@ -128,6 +170,8 @@ class ManageUpgradeGroups extends Maintenance {
 			!$this->hasOption( 'add' ) &&
 			!$this->hasOption( 'remove' ) &&
 			!$this->hasOption( 'percent' ) &&
+			!$this->hasOption( 'count' ) &&
+			!$this->hasOption( 'add-all' ) &&
 			!$this->hasOption( 'check' ) &&
 			!$this->hasOption( 'list' );
 
@@ -141,8 +185,13 @@ class ManageUpgradeGroups extends Maintenance {
 			return;
 		}
 
-		if ( $this->hasOption( 'percent' ) ) {
-			$this->doPercent();
+		$selectionModes = array_filter( [ 'percent', 'count', 'add-all' ], fn ( $mode ) => $this->hasOption( $mode ) );
+		if ( count( $selectionModes ) > 1 ) {
+			$this->fatalError( 'Pass only one of --percent, --count and --add-all.' );
+		}
+
+		if ( $selectionModes !== [] ) {
+			$this->doSelect( reset( $selectionModes ) );
 			return;
 		}
 
@@ -173,18 +222,19 @@ class ManageUpgradeGroups extends Maintenance {
 			return;
 		}
 
-		$total = count( $this->getAllWikis() );
+		$pool = array_flip( $this->getPool() );
+		$total = count( $pool );
 		$covered = 0;
 		foreach ( $all as $name => $wikis ) {
-			$covered += count( $wikis );
+			$covered += count( array_filter( $wikis, static fn ( $wiki ) => isset( $pool[$wiki] ) ) );
 			$this->output( "$name (" . count( $wikis ) . " wikis):\n" );
 			foreach ( $wikis as $wiki ) {
 				$this->output( "  $wiki\n" );
 			}
 		}
 
-		$this->output( "\n$covered of $total wikis (" . $this->formatPercent( $covered, $total ) .
-			") are in a group.\n" );
+		$this->output( "\n$covered of $total {$this->describePool()} (" .
+			$this->formatPercent( $covered, $total ) . ") are in a group.\n" );
 	}
 
 	private function doCheck(): void {
@@ -194,21 +244,22 @@ class ManageUpgradeGroups extends Maintenance {
 		}
 
 		$assigned = $this->groups->getAssignedWikis();
-		$all = $this->getAllWikis();
-		$ungrouped = array_values( array_diff( $all, $assigned ) );
-		$unknown = array_values( array_diff( $assigned, $all ) );
+		$pool = $this->getPool();
+		$poolAssigned = array_values( array_intersect( $pool, $assigned ) );
+		$ungrouped = array_values( array_diff( $pool, $assigned ) );
+		$unknown = array_values( array_diff( $assigned, $this->getAllWikis(), $this->readStateList( 'deleted' ) ) );
 
-		$this->output( count( $assigned ) . ' of ' . count( $all ) . ' wikis (' .
-			$this->formatPercent( count( $assigned ), count( $all ) ) . ") are in a group.\n" );
+		$this->output( count( $poolAssigned ) . ' of ' . count( $pool ) . " {$this->describePool()} (" .
+			$this->formatPercent( count( $poolAssigned ), count( $pool ) ) . ") are in a group.\n" );
 
 		if ( $unknown !== [] ) {
-			$this->output( "Wikis in a group but not in \$wgLocalDatabases:\n" );
+			$this->output( "Wikis in a group that no longer exist:\n" );
 			foreach ( $unknown as $wiki ) {
 				$this->output( "  $wiki\n" );
 			}
 		}
 
-		$this->output( count( $ungrouped ) . " wikis are in no group.\n" );
+		$this->output( count( $ungrouped ) . " {$this->describePool()} are in no group.\n" );
 		if ( $duplicates === [] ) {
 			$this->output( "No duplicates found.\n" );
 		}
@@ -258,7 +309,7 @@ class ManageUpgradeGroups extends Maintenance {
 		}
 
 		if ( !$this->groups->isValidGroupName( $group ) ) {
-			$this->fatalError( "Invalid group name: $group" );
+			$this->fatalError( "Invalid group name: $group (groups must be named {$this->groups->getPrefix()}<number>)" );
 		}
 
 		$requested = $this->getWikiListOption( 'add' );
@@ -350,38 +401,53 @@ class ManageUpgradeGroups extends Maintenance {
 		}
 	}
 
-	private function doPercent(): void {
-		$percent = (float)$this->getOption( 'percent' );
-		if ( $percent <= 0 || $percent > 100 ) {
-			$this->fatalError( '--percent must be greater than 0 and at most 100.' );
+	/**
+	 * Create or top up a group from the selected wikis that are in no group yet.
+	 *
+	 * @param string $mode 'percent', 'count' or 'add-all'
+	 */
+	private function doSelect( string $mode ): void {
+		$pool = $this->getPool();
+		$total = count( $pool );
+		$describe = $this->describePool();
+		if ( $total === 0 ) {
+			$this->fatalError( "No $describe found." );
 		}
 
-		$all = $this->getAllWikis();
-		$total = count( $all );
-		if ( $total === 0 ) {
-			$this->fatalError( 'No wikis found in $wgLocalDatabases.' );
+		$group = $this->getOption( 'group' ) ?? $this->groups->getNextGroupName();
+		if ( !$this->groups->isValidGroupName( $group ) ) {
+			$this->fatalError( "Invalid group name: $group (groups must be named {$this->groups->getPrefix()}<number>)" );
 		}
 
 		$assigned = $this->groups->getAssignedWikis();
-		$group = $this->getOption( 'group' ) ?? $this->groups->getNextGroupName();
-		if ( !$this->groups->isValidGroupName( $group ) ) {
-			$this->fatalError( "Invalid group name: $group" );
+		$coveredNow = count( array_intersect( $pool, $assigned ) );
+		$candidates = array_values( array_diff( $pool, $assigned ) );
+
+		if ( $mode === 'percent' ) {
+			$percent = (float)$this->getOption( 'percent' );
+			if ( $percent <= 0 || $percent > 100 ) {
+				$this->fatalError( '--percent must be greater than 0 and at most 100.' );
+			}
+
+			$target = (int)ceil( $total * $percent / 100 );
+			$needed = $target - $coveredNow;
+			$this->output( "Target $percent% of $total $describe = $target, $coveredNow already grouped.\n" );
+			if ( $needed <= 0 ) {
+				$this->output( "Groups already cover $coveredNow of $total $describe (" .
+					$this->formatPercent( $coveredNow, $total ) . "), at or above $percent%. Nothing to do.\n" );
+				return;
+			}
+		} elseif ( $mode === 'count' ) {
+			$needed = (int)$this->getOption( 'count' );
+			if ( $needed < 1 ) {
+				$this->fatalError( '--count must be at least 1.' );
+			}
+		} else {
+			$needed = count( $candidates );
 		}
 
-		// Only wikis that still exist count towards coverage.
-		$coveredNow = count( array_intersect( $all, $assigned ) );
-		$target = (int)ceil( $total * $percent / 100 );
-		$needed = $target - $coveredNow;
-
-		if ( $needed <= 0 ) {
-			$this->output( "Groups already cover $coveredNow of $total wikis (" .
-				$this->formatPercent( $coveredNow, $total ) . "), at or above $percent%. Nothing to do.\n" );
-			return;
-		}
-
-		$candidates = array_values( array_diff( $all, $assigned ) );
 		if ( $candidates === [] ) {
-			$this->output( "Every wiki is already in a group. Nothing to do.\n" );
+			$this->output( "Every one of the $total $describe is already in a group. Nothing to do.\n" );
 			return;
 		}
 
@@ -397,20 +463,97 @@ class ManageUpgradeGroups extends Maintenance {
 		}
 
 		$selected = array_slice( $candidates, 0, $needed );
-		$existing = $this->groups->getWikis( $group );
-		$newContents = array_merge( $existing, array_values( array_diff( $selected, $existing ) ) );
+		if ( count( $selected ) < $needed ) {
+			$this->output( 'Only ' . count( $selected ) . " ungrouped $describe left, taking all of them.\n" );
+		}
 
-		$this->output( "Target $percent% of $total wikis = $target wikis, $coveredNow already grouped.\n" );
-		$this->output( 'Putting ' . count( $selected ) . " wikis into $group:\n" );
+		$existing = $this->groups->getWikis( $group );
+
+		$this->output( 'Putting ' . count( $selected ) . " $describe into $group:\n" );
 		foreach ( $selected as $wiki ) {
 			$this->output( "  $wiki\n" );
 		}
 
-		$this->writeGroup( $group, $newContents );
+		$this->writeGroup( $group, array_merge( $existing, $selected ) );
 
 		$coverage = $coveredNow + count( $selected );
-		$this->output( "Groups now cover $coverage of $total wikis (" .
+		$this->output( "Groups now cover $coverage of $total $describe (" .
 			$this->formatPercent( $coverage, $total ) . ").\n" );
+	}
+
+	/**
+	 * Wikis matching --state and --exclude-state. Without --state this is every wiki
+	 * in $wgLocalDatabases, which leaves out deleted wikis.
+	 *
+	 * @return string[]
+	 */
+	private function getPool(): array {
+		if ( $this->pool !== null ) {
+			return $this->pool;
+		}
+
+		$states = $this->getStateOption( 'state' );
+		if ( $states === [] ) {
+			$pool = $this->getAllWikis();
+		} else {
+			$pool = $this->readStateList( array_shift( $states ) );
+			foreach ( $states as $state ) {
+				$pool = array_intersect( $pool, $this->readStateList( $state ) );
+			}
+		}
+
+		foreach ( $this->getStateOption( 'exclude-state' ) as $state ) {
+			$pool = array_diff( $pool, $this->readStateList( $state ) );
+		}
+
+		$this->pool = array_values( array_unique( $pool ) );
+		return $this->pool;
+	}
+
+	private function describePool(): string {
+		$states = $this->getStateOption( 'state' );
+		$excluded = $this->getStateOption( 'exclude-state' );
+
+		$description = $states === [] ? 'wikis' : implode( ' ', $states ) . ' wikis';
+		if ( $excluded !== [] ) {
+			$description .= ' (excluding ' . implode( ', ', $excluded ) . ')';
+		}
+
+		return $description;
+	}
+
+	/**
+	 * @return string[]
+	 */
+	private function getStateOption( string $option ): array {
+		$value = $this->getOption( $option );
+		if ( !is_string( $value ) || $value === '' ) {
+			return [];
+		}
+
+		$states = array_values( array_unique( array_filter( array_map( 'trim', explode( ',', $value ) ) ) ) );
+		$unknown = array_diff( $states, self::STATES );
+		if ( $unknown !== [] ) {
+			$this->fatalError(
+				"Unknown --$option: " . implode( ', ', $unknown ) . '. Valid states: ' . implode( ', ', self::STATES )
+			);
+		}
+
+		return $states;
+	}
+
+	/**
+	 * @return string[]
+	 */
+	private function readStateList( string $state ): array {
+		if ( !$this->groups->listExists( $state ) ) {
+			$this->fatalError(
+				"The '$state' database list does not exist in {$this->groups->getCacheDirectory()}. " .
+				'Regenerate the database lists first.'
+			);
+		}
+
+		return $this->groups->readList( $state );
 	}
 
 	/**
@@ -460,6 +603,14 @@ class ManageUpgradeGroups extends Maintenance {
 	 */
 	private function getAllWikis(): array {
 		return $this->getConfig()->get( MainConfigNames::LocalDatabases );
+	}
+
+	private function formatPercent( int $part, int $total ): string {
+		if ( $total === 0 ) {
+			return '0%';
+		}
+
+		return round( $part / $total * 100, 1 ) . '%';
 	}
 
 	private function requireGroupExists( string $group ): void {

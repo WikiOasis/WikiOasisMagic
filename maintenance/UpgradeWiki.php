@@ -7,7 +7,10 @@ namespace WikiOasis\WikiOasisMagic\Maintenance;
  *
  * The wikis being upgraded are given as arguments, via --group or via --file. The
  * --wiki option only decides which wiki this script itself runs under, and does not
- * have to be one of the wikis being upgraded.
+ * have to be one of the wikis being upgraded. Each target wiki is upgraded in its
+ * own `run.php --wiki=<target>` process, --parallel of them at a time, and version
+ * changes for the whole batch are made in one pass with a single regeneration of
+ * the database lists.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -36,7 +39,6 @@ use MediaWiki\Logger\LoggerFactory;
 use MediaWiki\MainConfigNames;
 use MediaWiki\Maintenance\Maintenance;
 use MediaWiki\Registration\ExtensionRegistry;
-use MediaWiki\Shell\Shell;
 use MwSql;
 use RuntimeException;
 use Throwable;
@@ -55,7 +57,7 @@ class UpgradeWiki extends Maintenance {
 		parent::__construct();
 		$this->addDescription(
 			'Run a wiki upgrade defined in a JSON file (patches + maintenance steps) ' .
-			'against one wiki, several wikis, or an upgrade group from cw_cache.'
+			'against one wiki, several wikis, or upgrade groups from cw_cache.'
 		);
 
 		$this->addArg(
@@ -98,8 +100,22 @@ class UpgradeWiki extends Maintenance {
 
 		$this->addOption(
 			'change-version',
-			'Run ChangeMediaWikiVersion for each wiki first, setting mwversion to the JSON\'s ' .
-				'mwversion key, before any patches or maintenance scripts run for that wiki.'
+			'Before anything else, set mwversion to the JSON\'s mwversion key on every target wiki ' .
+				'in one pass, then regenerate the database lists once.'
+		);
+
+		$this->addOption(
+			'change-version-after',
+			'After the upgrade, set mwversion on every wiki that upgraded successfully (or was ' .
+				'already upgraded) in one pass, then regenerate the database lists once. Wikis ' .
+				'keep serving their old version until their schema changes are in.'
+		);
+
+		$this->addOption(
+			'parallel',
+			'Number of wikis to upgrade at the same time. Defaults to 1.',
+			false,
+			true
 		);
 
 		$this->addOption( 'force', 'Run the upgrade again even on wikis already marked as upgraded.' );
@@ -121,6 +137,17 @@ class UpgradeWiki extends Maintenance {
 		$json = $this->loadJson( $jsonPath );
 		$this->assertRunningVersion( $json );
 
+		if ( $this->hasOption( 'change-version' ) && $this->hasOption( 'change-version-after' ) ) {
+			$this->completed = true;
+			$this->fatalError( 'Pass only one of --change-version and --change-version-after.' );
+		}
+
+		$parallel = (int)$this->getOption( 'parallel', 1 );
+		if ( $parallel < 1 ) {
+			$this->completed = true;
+			$this->fatalError( '--parallel must be at least 1.' );
+		}
+
 		$mwversion = $json['mwversion'];
 		$updateKey = "upgrade-wiki-$mwversion";
 
@@ -133,49 +160,80 @@ class UpgradeWiki extends Maintenance {
 			);
 		}
 
-		$count = count( $targets );
-		$this->output( "=== Upgrading $count wiki(s) to $mwversion based on JSON '$jsonPath' ===\n" );
+		$pending = [];
+		$skipped = [];
+		foreach ( $targets as $wiki ) {
+			try {
+				$alreadyUpgraded = !$this->hasOption( 'force' ) && $this->hasAlreadyUpgraded( $wiki, $updateKey );
+			} catch ( Throwable $t ) {
+				// Let the wiki's own upgrade run hit this properly, and log it, rather
+				// than abort the whole batch over one unreachable database.
+				$this->error( "Warning: could not read the updatelog of '$wiki': {$t->getMessage()}" );
+				$alreadyUpgraded = false;
+			}
+
+			if ( $alreadyUpgraded ) {
+				$skipped[] = $wiki;
+				continue;
+			}
+
+			$pending[] = $wiki;
+		}
+
+		$this->output( '=== ' . count( $targets ) . " wiki(s) targeted for $mwversion based on JSON '$jsonPath': " .
+			count( $pending ) . ' to upgrade, ' . count( $skipped ) . " already upgraded ===\n" );
 
 		if ( $this->hasOption( 'dry-run' ) ) {
-			foreach ( $targets as $wiki ) {
-				$state = $this->hasAlreadyUpgraded( $wiki, $updateKey ) ? ' (already upgraded)' : '';
-				$this->output( "Would upgrade: $wiki$state\n" );
+			foreach ( $pending as $wiki ) {
+				$this->output( "Would upgrade: $wiki\n" );
+			}
+
+			foreach ( $skipped as $wiki ) {
+				$this->output( "Already upgraded: $wiki\n" );
 			}
 
 			$this->completed = true;
 			return;
 		}
 
+		if ( $this->hasOption( 'change-version' ) ) {
+			$this->changeVersions( $targets, $mwversion );
+		}
+
 		$upgraded = [];
-		$skipped = [];
 		$failed = [];
+		if ( $pending !== [] ) {
+			$currentWiki = $this->getConfig()->get( MainConfigNames::DBname );
+			if ( $pending === [ $currentWiki ] ) {
+				// The only wiki to upgrade is the one this process was booted for, so
+				// there is no need to pay for booting another process.
+				$this->currentWiki = $currentWiki;
+				if ( $this->upgradeWiki( $currentWiki, $json, $updateKey ) ) {
+					$upgraded[] = $currentWiki;
+				} else {
+					$failed[] = $currentWiki;
+				}
 
-		foreach ( $targets as $wiki ) {
-			$this->currentWiki = $wiki;
-
-			if ( !$this->hasOption( 'force' ) && $this->hasAlreadyUpgraded( $wiki, $updateKey ) ) {
-				$this->output( "$wiki has already been upgraded to $mwversion, skipping.\n" );
-				$skipped[] = $wiki;
-				continue;
-			}
-
-			if ( $this->upgradeWiki( $wiki, $json, $updateKey ) ) {
-				$upgraded[] = $wiki;
-				continue;
-			}
-
-			$failed[] = $wiki;
-			if ( !$this->hasOption( 'continue-on-error' ) ) {
-				$this->error( 'Stopping, pass --continue-on-error to upgrade the remaining wikis anyway.' );
-				break;
+				$this->currentWiki = null;
+			} else {
+				[ $upgraded, $failed ] = $this->runChildren( $pending, $jsonPath, $parallel );
 			}
 		}
 
-		$this->currentWiki = null;
+		$notRun = array_values( array_diff( $pending, $upgraded, $failed ) );
+
+		if ( $this->hasOption( 'change-version-after' ) ) {
+			$this->changeVersions( array_merge( $skipped, $upgraded ), $mwversion );
+		}
+
 		$this->completed = true;
 
-		$this->output( "=== Done: " . count( $upgraded ) . ' upgraded, ' . count( $skipped ) .
-			' skipped, ' . count( $failed ) . " failed ===\n" );
+		$this->output( '=== Done: ' . count( $upgraded ) . ' upgraded, ' . count( $skipped ) .
+			' already upgraded, ' . count( $failed ) . ' failed, ' . count( $notRun ) . " not run ===\n" );
+
+		if ( $notRun !== [] ) {
+			$this->output( 'Not run: ' . implode( ', ', $notRun ) . "\n" );
+		}
 
 		if ( $failed !== [] ) {
 			$this->fatalError( 'Upgrade failed on: ' . implode( ', ', $failed ) );
@@ -202,8 +260,9 @@ class UpgradeWiki extends Maintenance {
 					continue;
 				}
 
-				if ( !$groups->groupExists( $group ) ) {
+				if ( !$groups->isValidGroupName( $group ) || !$groups->groupExists( $group ) ) {
 					$this->currentStep = "reading upgrade group '$group'";
+					$this->completed = true;
 					$this->fatalError( "No such upgrade group: $group" );
 				}
 
@@ -217,6 +276,7 @@ class UpgradeWiki extends Maintenance {
 			$fromFile = file( $this->getOption( 'file' ), FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES );
 			if ( $fromFile === false ) {
 				$this->currentStep = 'reading --file';
+				$this->completed = true;
 				$this->fatalError( 'Unable to read file, exiting.' );
 			}
 
@@ -225,9 +285,9 @@ class UpgradeWiki extends Maintenance {
 
 		$targets = array_values( array_unique( array_filter( $targets, static fn ( $wiki ) => $wiki !== '' ) ) );
 
-		$localDatabases = $this->getConfig()->get( MainConfigNames::LocalDatabases );
+		$localDatabases = array_flip( $this->getConfig()->get( MainConfigNames::LocalDatabases ) );
 		foreach ( $targets as $wiki ) {
-			if ( !in_array( $wiki, $localDatabases, true ) ) {
+			if ( !isset( $localDatabases[$wiki] ) ) {
 				$this->error( "Warning: '$wiki' is not in \$wgLocalDatabases." );
 			}
 		}
@@ -235,14 +295,201 @@ class UpgradeWiki extends Maintenance {
 		return $targets;
 	}
 
+	/**
+	 * Point every given wiki at a MediaWiki version in one pass, then regenerate the
+	 * database lists once, instead of once per wiki. ChangeMediaWikiVersion only
+	 * writes to the global cw_wikis table, so running it in this process is correct
+	 * whichever wiki the process was booted for.
+	 *
+	 * @param string[] $wikis
+	 */
+	private function changeVersions( array $wikis, string $mwversion ): void {
+		if ( $wikis === [] ) {
+			return;
+		}
+
+		$this->output( "=== Setting mwversion to '$mwversion' on " . count( $wikis ) .
+			" wiki(s), then regenerating the database lists once ===\n" );
+		$this->currentStep = "running ChangeMediaWikiVersion to set mwversion to '$mwversion'";
+
+		$file = tempnam( wfTempDir(), 'upgradewiki-' );
+		if ( $file === false ) {
+			throw new RuntimeException( 'Could not create a temporary file for ChangeMediaWikiVersion.' );
+		}
+
+		try {
+			file_put_contents( $file, implode( "\n", $wikis ) . "\n" );
+			$this->runMaintenanceClass( ChangeMediaWikiVersion::class, [
+				'mwversion' => $mwversion,
+				'file' => $file,
+			], [] );
+		} finally {
+			unlink( $file );
+		}
+	}
+
+	/**
+	 * Upgrade each wiki in its own `run.php --wiki=<wiki>` process, since a maintenance
+	 * class run in this process would talk to this process's wiki instead. Up to
+	 * $parallel of them run at once, their output prefixed with the wiki name.
+	 *
+	 * @param string[] $wikis
+	 * @param string $jsonPath
+	 * @param int $parallel
+	 * @return array{0:string[],1:string[]} Wikis that upgraded, wikis that failed
+	 *
+	 * @suppress SecurityCheck-ShellInjection proc_open() is given an argument array, no shell is involved
+	 */
+	private function runChildren( array $wikis, string $jsonPath, int $parallel ): array {
+		$jsonPath = realpath( $jsonPath ) ?: $jsonPath;
+		$php = $this->getConfig()->get( MainConfigNames::PhpCli ) ?: PHP_BINARY;
+
+		$queue = $wikis;
+		$running = [];
+		$upgraded = [];
+		$failed = [];
+		$stopping = false;
+
+		while ( $running !== [] || ( $queue !== [] && !$stopping ) ) {
+			while ( !$stopping && $queue !== [] && count( $running ) < $parallel ) {
+				$wiki = array_shift( $queue );
+				$command = [
+					$php,
+					MW_INSTALL_PATH . '/maintenance/run.php',
+					self::class,
+					'--wiki', $wiki,
+					'--json', $jsonPath,
+				];
+
+				if ( $this->hasOption( 'force' ) ) {
+					$command[] = '--force';
+				}
+
+				$command[] = $wiki;
+
+				$pipes = [];
+				// phpcs:ignore MediaWiki.Usage.ForbiddenFunctions.proc_open
+				$process = proc_open( $command, [
+					0 => [ 'file', '/dev/null', 'r' ],
+					1 => [ 'pipe', 'w' ],
+					2 => [ 'pipe', 'w' ],
+				], $pipes );
+
+				if ( $process === false ) {
+					$this->error( "[$wiki] Failed to start upgrade process." );
+					$failed[] = $wiki;
+					$stopping = !$this->hasOption( 'continue-on-error' );
+					continue;
+				}
+
+				stream_set_blocking( $pipes[1], false );
+				stream_set_blocking( $pipes[2], false );
+				$running[$wiki] = [
+					'process' => $process,
+					'pipes' => [ 1 => $pipes[1], 2 => $pipes[2] ],
+					'buffers' => [ 1 => '', 2 => '' ],
+				];
+
+				$started = count( $upgraded ) + count( $failed ) + count( $running );
+				$this->output( "=== [$wiki] Started ($started/" . count( $wikis ) . ") ===\n" );
+			}
+
+			$this->pumpChildOutput( $running );
+
+			foreach ( $running as $wiki => $child ) {
+				if ( $child['pipes'] !== [] ) {
+					continue;
+				}
+
+				$exitCode = proc_close( $child['process'] );
+				unset( $running[$wiki] );
+
+				if ( $exitCode === 0 ) {
+					$upgraded[] = $wiki;
+					$this->output( "=== [$wiki] Upgraded ===\n" );
+					continue;
+				}
+
+				$failed[] = $wiki;
+				$this->error( "=== [$wiki] Failed with exit status $exitCode ===" );
+				if ( !$this->hasOption( 'continue-on-error' ) && !$stopping ) {
+					$stopping = true;
+					$this->error(
+						'Not starting any more wikis, pass --continue-on-error to carry on past failures. ' .
+						'Waiting for ' . count( $running ) . ' running wiki(s) to finish.'
+					);
+				}
+			}
+		}
+
+		return [ $upgraded, $failed ];
+	}
+
+	/**
+	 * Wait up to a second for output from the running children, and print every
+	 * complete line prefixed with its wiki. Pipes that reached EOF are closed and
+	 * removed, so a child whose 'pipes' is empty has exited.
+	 */
+	private function pumpChildOutput( array &$running ): void {
+		$read = [];
+		foreach ( $running as $child ) {
+			foreach ( $child['pipes'] as $pipe ) {
+				$read[] = $pipe;
+			}
+		}
+
+		if ( $read === [] ) {
+			return;
+		}
+
+		$write = null;
+		$except = null;
+		if ( stream_select( $read, $write, $except, 1 ) === false ) {
+			return;
+		}
+
+		foreach ( $running as $wiki => &$child ) {
+			foreach ( $child['pipes'] as $fd => $pipe ) {
+				if ( !in_array( $pipe, $read, true ) ) {
+					continue;
+				}
+
+				$chunk = fread( $pipe, 65536 );
+				if ( $chunk !== false && $chunk !== '' ) {
+					$child['buffers'][$fd] .= $chunk;
+				}
+
+				$eof = feof( $pipe );
+				$lines = explode( "\n", $child['buffers'][$fd] );
+				// The last piece is an incomplete line unless the stream has ended.
+				$child['buffers'][$fd] = $eof ? '' : array_pop( $lines );
+
+				foreach ( $lines as $line ) {
+					if ( $line === '' && $eof ) {
+						continue;
+					}
+
+					if ( $fd === 2 ) {
+						$this->error( "[$wiki] $line" );
+					} else {
+						$this->output( "[$wiki] $line\n" );
+					}
+				}
+
+				if ( $eof ) {
+					fclose( $pipe );
+					unset( $child['pipes'][$fd] );
+				}
+			}
+		}
+
+		unset( $child );
+	}
+
 	private function upgradeWiki( string $wiki, array $json, string $updateKey ): bool {
 		$this->output( "=== Upgrading '$wiki' ===\n" );
 
 		try {
-			if ( $this->hasOption( 'change-version' ) ) {
-				$this->runVersionChange( $wiki, $json );
-			}
-
 			$this->runPatchesSection( $wiki, $json, 'pre_patches', "=== Running pre-maintenance SQL patches ===\n" );
 			$this->runMaintenanceSection( $wiki, $json );
 			$this->runPatchesSection( $wiki, $json, 'post_patches', "=== Running post-maintenance SQL patches ===\n" );
@@ -344,19 +591,6 @@ class UpgradeWiki extends Maintenance {
 		}
 	}
 
-	private function runVersionChange( string $wiki, array $json ): void {
-		$mwversion = $json['mwversion'];
-
-		$this->output( "=== Running ChangeMediaWikiVersion to set mwversion to '$mwversion' for '$wiki' ===\n" );
-		$this->currentStep = "running ChangeMediaWikiVersion to set mwversion to '$mwversion' for '$wiki'";
-
-		// --regex pins the change to this wiki alone, whichever wiki the script runs under.
-		$this->runMaintenanceClass( $wiki, ChangeMediaWikiVersion::class, [
-			'mwversion' => $mwversion,
-			'regex' => '/^' . preg_quote( $wiki, '/' ) . '$/',
-		], [] );
-	}
-
 	private function runPatchesSection( string $wiki, array $json, string $key, string $header ): void {
 		$items = $json[$key] ?? [];
 		if ( $items === [] ) {
@@ -426,7 +660,7 @@ class UpgradeWiki extends Maintenance {
 
 			$this->output( "==> Maintenance: $class\n" );
 			$this->currentStep = "running maintenance class '$class' on '$wiki'";
-			$this->runMaintenanceClass( $wiki, $class, $options, $args );
+			$this->runMaintenanceClass( $class, $options, $args );
 		}
 	}
 
@@ -438,7 +672,7 @@ class UpgradeWiki extends Maintenance {
 		$maint->execute();
 	}
 
-	private function runMaintenanceClass( string $wiki, string $class, array $options, array $args ): void {
+	private function runMaintenanceClass( string $class, array $options, array $args ): void {
 		if ( !class_exists( $class ) ) {
 			$this->fatalError( "Maintenance class not found: $class" );
 		}
@@ -446,25 +680,9 @@ class UpgradeWiki extends Maintenance {
 		$options = $this->validateOptions( $class, $options );
 		$args = $this->validateArgs( $class, $args );
 
-		// A maintenance class instantiated in this process talks to the database of the
-		// wiki this process was booted for, so it can only be run in-process when that
-		// is the wiki being upgraded. Anything else has to be a separate process.
-		if ( $wiki === $this->getConfig()->get( MainConfigNames::DBname ) ) {
-			$this->runMaintenanceClassInProcess( $wiki, $class, $options, $args );
-			return;
-		}
-
-		$this->runMaintenanceClassInSubprocess( $wiki, $class, $options, $args );
-	}
-
-	private function runMaintenanceClassInProcess( string $wiki, string $class, array $options, array $args ): void {
 		/** @var Maintenance $maint */
 		$maint = new $class();
 		'@phan-var Maintenance $maint';
-
-		if ( !isset( $options['wiki'] ) ) {
-			$maint->setOption( 'wiki', $wiki );
-		}
 
 		foreach ( $options as $key => $value ) {
 			$maint->setOption( $key, $value );
@@ -477,50 +695,6 @@ class UpgradeWiki extends Maintenance {
 		}
 
 		$maint->execute();
-	}
-
-	/**
-	 * @suppress SecurityCheck-ShellInjection Every argument goes through Shell::escape()
-	 */
-	private function runMaintenanceClassInSubprocess(
-		string $wiki, string $class, array $options, array $args
-	): void {
-		$php = $this->getConfig()->get( MainConfigNames::PhpCli ) ?: PHP_BINARY;
-		$command = [
-			$php,
-			MW_INSTALL_PATH . '/maintenance/run.php',
-			$class,
-			'--wiki',
-			$wiki,
-		];
-
-		foreach ( $options as $key => $value ) {
-			if ( $value === null || $value === false ) {
-				continue;
-			}
-
-			$command[] = "--$key";
-			if ( $value !== true ) {
-				$command[] = (string)$value;
-			}
-		}
-
-		foreach ( $args as $arg ) {
-			$command[] = $arg;
-		}
-
-		$this->output( '===> ' . implode( ' ', $command ) . "\n" );
-
-		$exitCode = 0;
-		// passthru() rather than Shell::command() so that the output of a step that can
-		// run for hours streams out live instead of being buffered until it finishes.
-		// Every argument is escaped by Shell::escape() above.
-		// phpcs:ignore MediaWiki.Usage.ForbiddenFunctions.passthru
-		passthru( Shell::escape( ...$command ), $exitCode );
-
-		if ( $exitCode !== 0 ) {
-			throw new RuntimeException( "$class exited with status $exitCode on $wiki." );
-		}
 	}
 
 	private function validateOptions( string $class, array $options ): array {
