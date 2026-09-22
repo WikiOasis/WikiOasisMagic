@@ -81,11 +81,17 @@ class ChangeMediaWikiVersion extends Maintenance {
 
 		$remoteWikiFactory = $this->getServiceContainer()->get( 'RemoteWikiFactory' );
 
-		foreach ( $dbnames as $dbname ) {
-			$oldVersion = WikiOasisFunctions::getMediaWikiVersion( $dbname );
+		$defaultVersion = WikiOasisFunctions::MEDIAWIKI_VERSIONS[WikiOasisFunctions::getDefaultMediaWikiVersion()];
+		$changed = 0;
 
+		foreach ( $dbnames as $dbname ) {
 			$remoteWiki = $remoteWikiFactory->newInstance( $dbname );
 			$remoteWiki->disableResetDatabaseLists();
+
+			$oldVersion = $this->resolveVersion(
+				(string)( $remoteWiki->getExtraFieldData( 'mediawiki-version', $defaultVersion ) ?: $defaultVersion )
+			);
+
 			if ( $this->hasOption( 'active' ) && ( $remoteWiki->isClosed() || $remoteWiki->isDeleted() || $remoteWiki->isInactive() ) ) {
 				continue;
 			}
@@ -102,6 +108,11 @@ class ChangeMediaWikiVersion extends Maintenance {
 				continue;
 			}
 
+			if ( $oldVersion === $newVersion ) {
+				$this->output( "$dbname is already on $newVersion\n" );
+				continue;
+			}
+
 			if ( $this->hasOption( 'dry-run' ) ) {
 				$this->output( "Dry run: Would upgrade $dbname from $oldVersion to $newVersion\n" );
 				continue;
@@ -112,12 +123,15 @@ class ChangeMediaWikiVersion extends Maintenance {
 			);
 
 			$remoteWiki->commit();
+			$changed++;
 			$this->output( "Upgraded $dbname from $oldVersion to $newVersion\n" );
 		}
 
-		if ( $this->hasOption( 'dry-run' ) ) {
+		if ( $this->hasOption( 'dry-run' ) || $changed === 0 ) {
 			return;
 		}
+
+		$this->output( "Regenerating database lists for $changed changed wiki(s)\n" );
 
 		$dataStore = $this->getServiceContainer()->get( 'CreateWikiDataStore' );
 		$dataStore->resetDatabaseLists( isNewChanges: true );
