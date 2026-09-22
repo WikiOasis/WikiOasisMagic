@@ -26,6 +26,7 @@ namespace WikiOasis\WikiOasisMagic\Maintenance;
 
 use MediaWiki\MainConfigNames;
 use MediaWiki\Maintenance\Maintenance;
+use Wikimedia\AtEase\AtEase;
 use WikiOasisFunctions;
 
 class ChangeMediaWikiVersion extends Maintenance {
@@ -37,7 +38,7 @@ class ChangeMediaWikiVersion extends Maintenance {
 
 		$this->addOption( 'mwversion', 'Sets the wikis requested to a different MediaWiki version. Accepts either a version number (e.g. 1.45) or an alias from WikiOasisFunctions::MEDIAWIKI_VERSIONS (e.g. stable).', true, true );
 		$this->addOption( 'file', 'Path to file where the wikinames are stored. Must be one wikidb name per line. (Optional, falls back to current dbname)', false, true );
-		$this->addOption( 'regex', 'Uses a regular expression to select wikis starting with a specific pattern. Overrides the --file option.' );
+		$this->addOption( 'regex', 'Select wikis whose database name matches this PCRE pattern, e.g. \'/^(testwiki|test2wiki)$/\'. Overrides the --file option.', false, true );
 		$this->addOption( 'dry-run', 'Performs a dry run without making any changes to the wikis.' );
 
 		// All wikis
@@ -64,13 +65,19 @@ class ChangeMediaWikiVersion extends Maintenance {
 			$dbnames = $this->getWikiDbNamesByRegex( $pattern );
 		} elseif ( $this->hasOption( 'file' ) ) {
 			$dbnames = file( $this->getOption( 'file' ), FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES );
-			if ( !$dbnames ) {
+			if ( $dbnames === false ) {
 				$this->fatalError( 'Unable to read file, exiting' );
 			}
+
+			$dbnames = array_values( array_filter( array_map( 'trim', $dbnames ) ) );
 		} elseif ( $this->hasOption( 'all-wikis' ) || $this->hasOption( 'active' ) || $this->hasOption( 'closed' ) || $this->hasOption( 'deleted' ) || $this->hasOption( 'inactive' ) ) {
 			$dbnames = $this->getConfig()->get( MainConfigNames::LocalDatabases );
 		} else {
 			$dbnames[] = $this->getConfig()->get( MainConfigNames::DBname );
+		}
+
+		if ( $dbnames === [] ) {
+			$this->fatalError( 'No wikis matched, nothing to change.' );
 		}
 
 		$newVersion = $this->resolveVersion( $this->getOption( 'mwversion' ) );
@@ -83,6 +90,8 @@ class ChangeMediaWikiVersion extends Maintenance {
 
 		$defaultVersion = WikiOasisFunctions::MEDIAWIKI_VERSIONS[WikiOasisFunctions::getDefaultMediaWikiVersion()];
 		$changed = 0;
+		$alreadyOn = 0;
+		$filteredOut = 0;
 
 		foreach ( $dbnames as $dbname ) {
 			$remoteWiki = $remoteWikiFactory->newInstance( $dbname );
@@ -93,28 +102,34 @@ class ChangeMediaWikiVersion extends Maintenance {
 			);
 
 			if ( $this->hasOption( 'active' ) && ( $remoteWiki->isClosed() || $remoteWiki->isDeleted() || $remoteWiki->isInactive() ) ) {
+				$filteredOut++;
 				continue;
 			}
 
 			if ( $this->hasOption( 'closed' ) && !$remoteWiki->isClosed() ) {
+				$filteredOut++;
 				continue;
 			}
 
 			if ( $this->hasOption( 'deleted' ) && !$remoteWiki->isDeleted() ) {
+				$filteredOut++;
 				continue;
 			}
 
 			if ( $this->hasOption( 'inactive' ) && !$remoteWiki->isInactive() ) {
+				$filteredOut++;
 				continue;
 			}
 
 			if ( $oldVersion === $newVersion ) {
 				$this->output( "$dbname is already on $newVersion\n" );
+				$alreadyOn++;
 				continue;
 			}
 
 			if ( $this->hasOption( 'dry-run' ) ) {
 				$this->output( "Dry run: Would upgrade $dbname from $oldVersion to $newVersion\n" );
+				$changed++;
 				continue;
 			}
 
@@ -126,6 +141,10 @@ class ChangeMediaWikiVersion extends Maintenance {
 			$changed++;
 			$this->output( "Upgraded $dbname from $oldVersion to $newVersion\n" );
 		}
+
+		$verb = $this->hasOption( 'dry-run' ) ? 'would change' : 'changed';
+		$this->output( count( $dbnames ) . " wiki(s) selected: $changed $verb, $alreadyOn already on $newVersion, " .
+			"$filteredOut skipped by state filter\n" );
 
 		if ( $this->hasOption( 'dry-run' ) || $changed === 0 ) {
 			return;
@@ -151,6 +170,10 @@ class ChangeMediaWikiVersion extends Maintenance {
 	}
 
 	private function getWikiDbNamesByRegex( string $pattern ): array {
+		if ( AtEase::quietCall( 'preg_match', $pattern, '' ) === false ) {
+			$this->fatalError( "Invalid --regex pattern: $pattern" );
+		}
+
 		$allDbNames = $this->getConfig()->get( MainConfigNames::LocalDatabases );
 
 		$matchingDbNames = [];
