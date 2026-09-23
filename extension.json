@@ -176,6 +176,9 @@
 		"ext.wikioasismagic.simpleBlogPageFix": {
 			"scripts": [
 				"ext.wikioasismagic.simpleBlogPageFix.js"
+			],
+			"dependencies": [
+				"ext.oOJSPlus.data"
 			]
 		}
 	},
