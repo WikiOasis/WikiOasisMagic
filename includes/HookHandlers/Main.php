@@ -449,26 +449,6 @@ class Main implements
 		return true;
 	}
 
-	public function onBlockIpComplete( $block, $user, $priorBlock ) {
-		$blockAlertKeywords = $this->options->get( 'WikiOasisMagicReportsBlockAlertKeywords' );
-		foreach ( $blockAlertKeywords as $keyword ) {
-			// use mb_strtolower for case insensitivity
-			if ( str_contains( mb_strtolower( $block->getReasonComment()->text ), mb_strtolower( $keyword ) ) ) {
-				$data = [
-					'writekey' => $this->options->get( 'WikiOasisMagicReportsWriteKey' ),
-					'username' => $block->getTargetName(),
-					'reporter' => $user->getName(),
-					'report' => 'people-other',
-					'auto' => true,
-					'evidence' => 'This is an automatic report. A user was blocked on ' . WikiMap::getCurrentWikiId() . ', and the block matched keyword "' . $keyword . '." The block ID is: ' . $block->getId() . ', and the block reason is: ' . $block->getReasonComment()->text,
-				];
-
-				$this->httpRequestFactory->post( 'https://safety.wikioasis.org/api/report', [ 'postData' => $data ], __METHOD__ );
-				return;
-			}
-		}
-	}
-
 	public function onMimeMagicInit( $mimeMagic ) {
 		$mimeMagic->addExtraTypes( 'text/plain txt off' );
 	}

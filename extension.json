@@ -53,9 +53,6 @@
 		"PageSaveComplete": {
 			"handler": "CloudflarePurge"
 		},
-        "BlockIpComplete": {
-            "handler": "Main"
-        },
 		"ContributionsToolLinks": {
 			"handler": "Main"
 		},
