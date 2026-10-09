@@ -213,11 +213,7 @@
 		"EditPrompt": {
 			"class": "WikiOasis\\WikiOasisMagic\\HookHandlers\\EditPrompt",
 			"services": [
-				"WikiOasisMagic.ExperimentManager",
-				"WikiOasisMagic.ExperimentTracker",
-				"NamespaceInfo",
-				"PermissionManager",
-				"UserEditTracker"
+				"WikiOasisMagic.EditPromptGate"
 			]
 		},
 		"WikiPrompt": {
@@ -294,6 +290,12 @@
 				"WikiOasisMagic.ExperimentTracker",
 				"WikiOasisMagic.UnitFactory"
 			]
+		},
+		"wikioasiseditprompt": {
+			"class": "WikiOasis\\WikiOasisMagic\\Api\\ApiEditPrompt",
+			"services": [
+				"WikiOasisMagic.EditPromptGate"
+			]
 		}
 	},
 	"AvailableRights": [
@@ -356,6 +358,20 @@
 			],
 			"newbie": [
 				120,
+				60
+			]
+		},
+		"wikioasisexperiment-assign": {
+			"anon": [
+				120,
+				60
+			],
+			"user": [
+				240,
+				60
+			],
+			"newbie": [
+				240,
 				60
 			]
 		}
@@ -1439,6 +1455,7 @@
 			],
 			"dependencies": [
 				"ext.wikioasismagic.experiments.events",
+				"mediawiki.api",
 				"mediawiki.storage"
 			]
 		},

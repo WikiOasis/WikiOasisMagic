@@ -492,6 +492,8 @@
 	"apihelp-wikioasisexperimentevent-summary": "Record a client-side event for the current user or browser in an experiment.",
 	"apihelp-wikioasisexperimentevent-param-experiment": "Experiment name.",
 	"apihelp-wikioasisexperimentevent-param-metric": "Name of an event metric of the experiment that has \"client\" set.",
+	"apihelp-wikioasiseditprompt-summary": "Assign the current browser to the edit prompt experiment, and say whether to show the prompt.",
+	"apihelp-wikioasiseditprompt-param-title": "The page being read.",
 	"wikioasismagic-experiment-signup-label": "New signup screen",
 	"wikioasismagic-experiment-signup-description": "The redesigned Special:CreateAccount against the old one. Each browser is assigned once and keeps its screen.",
 	"wikioasismagic-experiment-signup-metric-account": "Created an account",

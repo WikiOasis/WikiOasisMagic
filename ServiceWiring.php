@@ -6,6 +6,7 @@ use MediaWiki\Logger\LoggerFactory;
 use MediaWiki\MainConfigNames;
 use MediaWiki\MediaWikiServices;
 use MediaWiki\Registration\ExtensionRegistry;
+use WikiOasis\WikiOasisMagic\EditPrompt\EditPromptGate;
 use WikiOasis\WikiOasisMagic\Experiments\ConfigNames as ExperimentsConfigNames;
 use WikiOasis\WikiOasisMagic\Experiments\ExperimentAdmin;
 use WikiOasis\WikiOasisMagic\Experiments\ExperimentDataStore;
@@ -26,6 +27,16 @@ use WikiOasis\WikiOasisMagic\Onboarding\WikiRequestSubmitter;
 
 /** @phpcs-require-sorted-array */
 return [
+	'WikiOasisMagic.EditPromptGate' => static function ( MediaWikiServices $services ): EditPromptGate {
+		return new EditPromptGate(
+			$services->get( 'WikiOasisMagic.ExperimentManager' ),
+			$services->get( 'WikiOasisMagic.ExperimentTracker' ),
+			$services->getNamespaceInfo(),
+			$services->getPermissionManager(),
+			$services->getUserEditTracker()
+		);
+	},
+
 	'WikiOasisMagic.ExperimentAdmin' => static function ( MediaWikiServices $services ): ExperimentAdmin {
 		return new ExperimentAdmin(
 			$services->get( 'WikiOasisMagic.ExperimentManager' ),

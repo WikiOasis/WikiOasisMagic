@@ -8,9 +8,12 @@
 
 	const events = require( 'ext.wikioasismagic.experiments.events' );
 	const STORAGE_KEY = 'wikioasismagic-editprompt';
+	const ASSIGNMENT_KEY = 'wikioasismagic-editprompt-assignment';
 	const EXPIRY = 365 * 86400;
+	const ASSIGNMENT_EXPIRY = 3600;
 	const DELAY = 1500;
-	const TABS = [ 'ca-ve-edit', 'ca-edit' ];
+	const PREVIEW_PARAMS = [ 'woexperiment', 'woexperimenttoken' ];
+	const ANCHORS = [ 'ca-ve-edit', 'ca-edit', 'ca-ve-edit-sticky-header', 'ca-edit-sticky-header' ];
 	const EDIT_ENTRIES = [
 		'#ca-ve-edit',
 		'#ca-edit',
@@ -21,32 +24,79 @@
 		'.mw-editsection'
 	].join( ',' );
 
+	let assignment = null;
 	let editClicked = false;
 	let popout = null;
+	let loading = false;
+	let stopWatching = null;
 
 	function record( metric ) {
-		if ( cfg.track ) {
+		if ( assignment && assignment.track ) {
 			events.record( cfg.experiment, metric );
 		}
 	}
 
-	function readState() {
+	function readStorage( key ) {
 		try {
-			const state = mw.storage.getObject( STORAGE_KEY );
-			return state === false ? null : ( state || {} );
+			return mw.storage.getObject( key );
 		} catch ( e ) {
-			return null;
+			return false;
 		}
 	}
 
-	function writeState( state ) {
+	function writeStorage( key, value, expiry ) {
 		try {
-			mw.storage.setObject( STORAGE_KEY, state, EXPIRY );
+			mw.storage.setObject( key, value, expiry );
 		} catch ( e ) {}
 	}
 
+	function readState() {
+		const state = readStorage( STORAGE_KEY );
+		return state === false ? null : ( state || {} );
+	}
+
 	function canShow( state ) {
-		return !!state && !state.done && ( !cfg.maxShows || ( state.shows || 0 ) < cfg.maxShows );
+		return !!state && !state.done &&
+			( !assignment.maxShows || ( state.shows || 0 ) < assignment.maxShows );
+	}
+
+	function getPreview() {
+		const params = new URLSearchParams( location.search );
+		const preview = {};
+		for ( const name of PREVIEW_PARAMS ) {
+			if ( params.has( name ) ) {
+				preview[ name ] = params.get( name );
+			}
+		}
+		return Object.keys( preview ).length ? preview : null;
+	}
+
+	function isAssignment( value ) {
+		return !!value && typeof value === 'object' &&
+			typeof value.prompt === 'boolean' && typeof value.track === 'boolean';
+	}
+
+	function loadAssignment() {
+		const preview = getPreview();
+		const cached = preview ? null : readStorage( ASSIGNMENT_KEY );
+		if ( isAssignment( cached ) ) {
+			return Promise.resolve( cached );
+		}
+
+		return Promise.resolve( new mw.Api().postWithToken( 'csrf', Object.assign( {
+			action: 'wikioasiseditprompt',
+			title: mw.config.get( 'wgPageName' ),
+			formatversion: 2
+		}, preview || {} ) ) ).then( ( data ) => {
+			const result = data && data.wikioasiseditprompt;
+			if ( !isAssignment( result ) ) {
+				return null;
+			}
+			if ( !preview ) {
+				writeStorage( ASSIGNMENT_KEY, result, ASSIGNMENT_EXPIRY );
+			}
+			return result;
+		} );
 	}
 
 	function isVisible( node ) {
@@ -68,15 +118,24 @@
 			rect.top < window.innerHeight && rect.left < document.documentElement.clientWidth;
 	}
 
+	function getAnchor( id ) {
+		const tab = document.getElementById( id );
+		const link = tab && ( tab.matches( 'a[href]' ) ? tab : tab.querySelector( 'a[href]' ) );
+		return link ? { tab: tab, link: link } : null;
+	}
+
 	function findAnchor() {
-		for ( const id of TABS ) {
-			const tab = document.getElementById( id );
-			const link = tab && ( tab.matches( 'a[href]' ) ? tab : tab.querySelector( 'a[href]' ) );
-			if ( link && isVisible( tab ) ) {
-				return { tab: tab, link: link };
+		for ( const id of ANCHORS ) {
+			const anchor = getAnchor( id );
+			if ( anchor && isVisible( anchor.tab ) && isInViewport( anchor.tab ) ) {
+				return anchor;
 			}
 		}
 		return null;
+	}
+
+	function hasAnchor() {
+		return ANCHORS.some( ( id ) => getAnchor( id ) !== null );
 	}
 
 	function isEditing() {
@@ -96,11 +155,14 @@
 	}
 
 	function finish() {
-		if ( cfg.prompt ) {
+		if ( stopWatching ) {
+			stopWatching();
+		}
+		if ( assignment && assignment.prompt ) {
 			const state = readState();
 			if ( state && !state.done ) {
 				state.done = true;
-				writeState( state );
+				writeStorage( STORAGE_KEY, state, EXPIRY );
 			}
 		}
 		if ( popout ) {
@@ -108,19 +170,6 @@
 			popout = null;
 		}
 	}
-
-	document.addEventListener( 'click', ( e ) => {
-		if ( e.button === 0 && isEditLink( e.target ) ) {
-			recordEditClick();
-			finish();
-		}
-	}, true );
-
-	if ( !cfg.prompt || mw.config.get( 'wgWikiOasisWikiPrompt' ) || !canShow( readState() ) ) {
-		return;
-	}
-
-	mw.hook( 've.activationStart' ).add( finish );
 
 	function whenVisible( callback ) {
 		if ( !document.hidden ) {
@@ -151,38 +200,95 @@
 		finish();
 	}
 
-	function show() {
-		if ( document.hidden ) {
-			whenVisible( () => setTimeout( show, DELAY ) );
-			return;
-		}
+	function isFinished() {
+		return editClicked || !!popout || isEditing() || !canShow( readState() );
+	}
 
-		if ( editClicked || popout || isEditing() || !canShow( readState() ) ) {
-			return;
-		}
-
-		const found = findAnchor();
-		if ( !found || !isInViewport( found.tab ) ) {
-			return;
-		}
-
+	function open() {
+		loading = true;
 		mw.loader.using( 'ext.wikioasismagic.editprompt.popout' ).then( ( req ) => {
-			const state = readState();
-			const anchor = findAnchor();
-			if ( editClicked || popout || isEditing() || !canShow( state ) || !anchor || !isInViewport( anchor.tab ) ) {
+			loading = false;
+			if ( isFinished() ) {
+				return;
+			}
+			const current = findAnchor();
+			if ( !current ) {
+				watch();
 				return;
 			}
 
-			popout = req( 'ext.wikioasismagic.editprompt.popout' ).open( anchor, {
+			popout = req( 'ext.wikioasismagic.editprompt.popout' ).open( current, {
 				isVisible: isVisible,
-				onEdit: ( e ) => onEdit( e, anchor ),
+				onEdit: ( e ) => onEdit( e, current ),
 				onDismiss: onDismiss
 			} );
+			const state = readState();
 			state.shows = ( state.shows || 0 ) + 1;
-			writeState( state );
+			writeStorage( STORAGE_KEY, state, EXPIRY );
 			record( 'prompt_shown' );
+		}, () => {
+			loading = false;
 		} );
 	}
 
-	whenVisible( () => setTimeout( show, DELAY ) );
+	function check() {
+		if ( isFinished() ) {
+			return true;
+		}
+		if ( !findAnchor() ) {
+			return false;
+		}
+		open();
+		return true;
+	}
+
+	function watch() {
+		if ( loading || check() ) {
+			return;
+		}
+
+		let frame = null;
+		function onChange() {
+			if ( frame === null ) {
+				frame = window.requestAnimationFrame( () => {
+					frame = null;
+					if ( !loading && check() && stopWatching ) {
+						stopWatching();
+					}
+				} );
+			}
+		}
+
+		window.addEventListener( 'scroll', onChange, { passive: true } );
+		window.addEventListener( 'resize', onChange );
+		stopWatching = () => {
+			window.removeEventListener( 'scroll', onChange );
+			window.removeEventListener( 'resize', onChange );
+			if ( frame !== null ) {
+				window.cancelAnimationFrame( frame );
+			}
+			stopWatching = null;
+		};
+	}
+
+	document.addEventListener( 'click', ( e ) => {
+		if ( e.button === 0 && isEditLink( e.target ) ) {
+			recordEditClick();
+			finish();
+		}
+	}, true );
+
+	loadAssignment().then( ( result ) => {
+		assignment = result;
+		if (
+			!assignment || !assignment.prompt || editClicked || mw.config.get( 'wgWikiOasisWikiPrompt' ) ||
+			!canShow( readState() ) || !hasAnchor()
+		) {
+			return;
+		}
+
+		record( 'prompt_ready' );
+		mw.hook( 've.activationStart' ).add( finish );
+		whenVisible( () => setTimeout( watch, DELAY ) );
+	}, () => {} );
 }() );
