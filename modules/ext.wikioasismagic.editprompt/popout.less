@@ -1,0 +1,119 @@
+@import 'mediawiki.skin.variables.less';
+
+.wo-editprompt {
+	position: absolute;
+	z-index: @z-index-dropdown - 1;
+	box-sizing: border-box;
+	display: flex;
+	flex-direction: column;
+	width: 20rem;
+	border: @border-width-base @border-style-base @border-color-base;
+	border-radius: @border-radius-base;
+	padding: @spacing-100;
+	background-color: @background-color-base;
+	color: @color-base;
+	box-shadow: @box-shadow-outset-medium-below @box-shadow-color-alpha-base, @box-shadow-outset-medium-around @box-shadow-color-alpha-base;
+	font-size: @font-size-medium;
+	line-height: @line-height-small;
+	text-align: start;
+	opacity: 0;
+	transform: translateY( -@spacing-25 );
+	transition-property: opacity, transform;
+	transition-duration: @transition-duration-medium;
+	transition-timing-function: @transition-timing-function-system;
+
+	&--above {
+		transform: translateY( @spacing-25 );
+	}
+
+	&--open {
+		opacity: 1;
+		transform: none;
+	}
+
+	&[ hidden ] {
+		display: none;
+	}
+
+	&:focus {
+		outline: 0;
+	}
+
+	&__arrow {
+		position: absolute;
+		top: -9px;
+		overflow: visible;
+		pointer-events: none;
+
+		path {
+			fill: @background-color-base;
+			stroke: @border-color-base;
+			stroke-width: 1px;
+		}
+	}
+
+	&--above &__arrow {
+		top: auto;
+		bottom: -9px;
+		transform: scaleY( -1 );
+	}
+
+	&__header {
+		display: flex;
+		align-items: flex-start;
+		gap: @spacing-50;
+		margin-bottom: @spacing-50;
+	}
+
+	&__title {
+		flex-grow: 1;
+		font-weight: @font-weight-bold;
+	}
+
+	&__icon {
+		flex-shrink: 0;
+		height: @line-height-small;
+		color: @color-progressive;
+	}
+
+	.cdx-icon {
+		display: inline-flex;
+		align-items: center;
+		width: 20px;
+
+		svg {
+			width: 20px;
+			height: 20px;
+			fill: currentcolor;
+		}
+	}
+
+	&__close {
+		flex-shrink: 0;
+		margin: -@spacing-30 -@spacing-50 -@spacing-30 0;
+	}
+
+	&__text {
+		margin: 0;
+		color: @color-base;
+	}
+
+	&__actions {
+		display: flex;
+		flex-flow: row-reverse wrap;
+		gap: @spacing-75;
+		margin-top: @spacing-100;
+
+		.cdx-button {
+			flex-grow: 0;
+		}
+	}
+
+	@media ( prefers-reduced-motion: reduce ) {
+		transition: none;
+	}
+
+	@media print {
+		display: none;
+	}
+}

@@ -103,6 +103,12 @@ final class Metric {
 					return null;
 				}
 				break;
+
+			case self::EVENT:
+				if ( ( $spec['client'] ?? false ) === true ) {
+					$filter['client'] = true;
+				}
+				break;
 		}
 
 		$text = [];
@@ -169,6 +175,10 @@ final class Metric {
 	/** @param string $path */
 	public function matchesApiModule( string $path ): bool {
 		return $this->type === self::API && in_array( $path, $this->filter['modules'], true );
+	}
+
+	public function isClientEvent(): bool {
+		return $this->type === self::EVENT && ( $this->filter['client'] ?? false ) === true;
 	}
 
 	public function toArray(): array {

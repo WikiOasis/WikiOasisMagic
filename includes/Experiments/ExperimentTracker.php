@@ -115,31 +115,32 @@ class ExperimentTracker {
 		}
 	}
 
-	public function trackEdit( UserIdentity $performer, int $namespace ): void {
+	public function trackEdit( UserIdentity $performer, int $namespace, ?WebRequest $request = null ): void {
 		$this->dispatch(
 			static fn ( Metric $metric ) => $metric->matchesEdit( $namespace ),
 			$performer,
-			null
+			$request
 		);
 	}
 
 	/**
 	 * @param string[] $tags
 	 * @param UserIdentity|null $performer
+	 * @param WebRequest|null $request
 	 */
-	public function trackTags( array $tags, ?UserIdentity $performer ): void {
+	public function trackTags( array $tags, ?UserIdentity $performer, ?WebRequest $request = null ): void {
 		$this->dispatch(
 			static fn ( Metric $metric ) => $metric->matchesTags( $tags ),
 			$performer,
-			null
+			$request
 		);
 	}
 
-	public function trackLog( string $type, string $action, UserIdentity $performer ): void {
+	public function trackLog( string $type, string $action, UserIdentity $performer, ?WebRequest $request = null ): void {
 		$this->dispatch(
 			static fn ( Metric $metric ) => $metric->matchesLog( $type, $action ),
 			$performer,
-			null
+			$request
 		);
 	}
 

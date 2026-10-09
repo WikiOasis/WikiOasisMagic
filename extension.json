@@ -123,7 +123,9 @@
 		},
 		"BeforePageDisplay": [
 			"Main",
-			"Onboarding"
+			"Onboarding",
+			"WikiPrompt",
+			"EditPrompt"
 		],
 		"AuthChangeFormFields": {
 			"handler": "Onboarding"
@@ -207,6 +209,29 @@
 				"WikiOasisMagic.ExperimentTracker",
 				"WikiOasisMagic.WikiRollout"
 			]
+		},
+		"EditPrompt": {
+			"class": "WikiOasis\\WikiOasisMagic\\HookHandlers\\EditPrompt",
+			"services": [
+				"WikiOasisMagic.ExperimentManager",
+				"WikiOasisMagic.ExperimentTracker",
+				"NamespaceInfo",
+				"PermissionManager",
+				"UserEditTracker"
+			]
+		},
+		"WikiPrompt": {
+			"class": "WikiOasis\\WikiOasisMagic\\HookHandlers\\WikiPrompt",
+			"services": [
+				"WikiOasisMagic.ExperimentManager",
+				"WikiOasisMagic.ExperimentTracker",
+				"WikiOasisMagic.ExperimentDataStore",
+				"WikiOasisMagic.WikiFarm",
+				"MainWANObjectCache"
+			],
+			"optional_services": [
+				"CreateWikiDatabaseUtils"
+			]
 		}
 	},
 	"SpecialPages": {
@@ -261,6 +286,14 @@
 				"WikiOasisMagic.ExperimentPresenter",
 				"WikiOasisMagic.WikiFarm"
 			]
+		},
+		"wikioasisexperimentevent": {
+			"class": "WikiOasis\\WikiOasisMagic\\Api\\ApiExperimentEvent",
+			"services": [
+				"WikiOasisMagic.ExperimentManager",
+				"WikiOasisMagic.ExperimentTracker",
+				"WikiOasisMagic.UnitFactory"
+			]
 		}
 	},
 	"AvailableRights": [
@@ -310,6 +343,20 @@
 			"newbie": [
 				10,
 				3600
+			]
+		},
+		"wikioasisexperiment-event": {
+			"anon": [
+				60,
+				60
+			],
+			"user": [
+				120,
+				60
+			],
+			"newbie": [
+				120,
+				60
 			]
 		}
 	},
@@ -1265,6 +1312,7 @@
 				"wikioasismagic-experiments-metric-edit",
 				"wikioasismagic-experiments-metric-edit-ns",
 				"wikioasismagic-experiments-metric-event",
+				"wikioasismagic-experiments-metric-event-client",
 				"wikioasismagic-experiments-metric-log",
 				"wikioasismagic-experiments-metric-primary",
 				"wikioasismagic-experiments-metric-specialpage",
@@ -1373,6 +1421,87 @@
 				"wikioasismagic-experiments-wikis-all",
 				"wikioasismagic-experiments-window",
 				"wikioasismagic-experiments-window-none"
+			]
+		},
+		"ext.wikioasismagic.experiments.events": {
+			"packageFiles": [
+				"ext.wikioasismagic.experiments.events/events.js"
+			],
+			"dependencies": [
+				"mediawiki.api",
+				"mediawiki.user",
+				"mediawiki.util"
+			]
+		},
+		"ext.wikioasismagic.editprompt": {
+			"packageFiles": [
+				"ext.wikioasismagic.editprompt/init.js"
+			],
+			"dependencies": [
+				"ext.wikioasismagic.experiments.events",
+				"mediawiki.storage"
+			]
+		},
+		"ext.wikioasismagic.editprompt.popout": {
+			"class": "MediaWiki\\ResourceLoader\\CodexModule",
+			"codexStyleOnly": true,
+			"codexComponents": [
+				"CdxButton"
+			],
+			"packageFiles": [
+				"ext.wikioasismagic.editprompt/popout.js",
+				{
+					"name": "ext.wikioasismagic.editprompt/icons.json",
+					"callback": "MediaWiki\\ResourceLoader\\CodexModule::getIcons",
+					"callbackParam": [
+						"cdxIconClose",
+						"cdxIconEdit"
+					]
+				}
+			],
+			"styles": [
+				"ext.wikioasismagic.editprompt/popout.less"
+			],
+			"messages": [
+				"wikioasismagic-editprompt-close",
+				"wikioasismagic-editprompt-edit",
+				"wikioasismagic-editprompt-later",
+				"wikioasismagic-editprompt-text",
+				"wikioasismagic-editprompt-title"
+			]
+		},
+		"ext.wikioasismagic.wikiprompt": {
+			"class": "MediaWiki\\ResourceLoader\\CodexModule",
+			"localBasePath": "modules/ext.wikioasismagic.wikiprompt",
+			"remoteExtPath": "WikiOasisMagic/modules/ext.wikioasismagic.wikiprompt",
+			"codexStyleOnly": true,
+			"codexComponents": [
+				"CdxButton"
+			],
+			"packageFiles": [
+				"wikiprompt.js",
+				{
+					"name": "icons.json",
+					"callback": "MediaWiki\\ResourceLoader\\CodexModule::getIcons",
+					"callbackParam": [
+						"cdxIconAdd",
+						"cdxIconClose"
+					]
+				}
+			],
+			"styles": [
+				"wikiprompt.less"
+			],
+			"messages": [
+				"wikioasismagic-wikiprompt-close",
+				"wikioasismagic-wikiprompt-later",
+				"wikioasismagic-wikiprompt-start",
+				"wikioasismagic-wikiprompt-text",
+				"wikioasismagic-wikiprompt-title"
+			],
+			"dependencies": [
+				"ext.wikioasismagic.experiments.events",
+				"mediawiki.storage"
 			]
 		}
 	},

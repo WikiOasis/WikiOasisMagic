@@ -70,7 +70,9 @@ function metricCounts( metric ) {
 		case 'api':
 			return mw.msg( 'wikioasismagic-experiments-metric-api', list( filter.modules ) );
 		default:
-			return mw.msg( 'wikioasismagic-experiments-metric-event' );
+			return filter.client ?
+				mw.msg( 'wikioasismagic-experiments-metric-event-client' ) :
+				mw.msg( 'wikioasismagic-experiments-metric-event' );
 	}
 }
 

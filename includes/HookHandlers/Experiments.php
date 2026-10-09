@@ -6,14 +6,17 @@ use MediaWiki\Api\ApiBase;
 use MediaWiki\Api\Hook\ApiCheckCanExecuteHook;
 use MediaWiki\Auth\Hook\AuthPreserveQueryParamsHook;
 use MediaWiki\ChangeTags\Hook\ChangeTagsAfterUpdateTagsHook;
+use MediaWiki\Context\RequestContext;
 use MediaWiki\Installer\DatabaseUpdater;
 use MediaWiki\Installer\Hook\LoadExtensionSchemaUpdatesHook;
 use MediaWiki\Logger\LoggerFactory;
 use MediaWiki\Logging\ManualLogEntry;
 use MediaWiki\MediaWikiServices;
 use MediaWiki\RecentChanges\RecentChange;
+use MediaWiki\Request\WebRequest;
 use MediaWiki\SpecialPage\Hook\SpecialPageBeforeExecuteHook;
 use MediaWiki\Storage\Hook\PageSaveCompleteHook;
+use MediaWiki\User\UserIdentity;
 use Miraheze\ManageWiki\Helpers\Factories\ModuleFactory;
 use Psr\Log\LoggerInterface;
 use Throwable;
@@ -102,7 +105,7 @@ class Experiments implements
 
 	public function onPageSaveComplete( $wikiPage, $user, $summary, $flags, $revisionRecord, $editResult ) {
 		if ( !$editResult->isNullEdit() ) {
-			$this->tracker->trackEdit( $user, $wikiPage->getNamespace() );
+			$this->tracker->trackEdit( $user, $wikiPage->getNamespace(), $this->getPerformerRequest( $user ) );
 		}
 	}
 
@@ -114,7 +117,7 @@ class Experiments implements
 		}
 
 		$performer = $user ?? ( $rc instanceof RecentChange ? $rc->getPerformerIdentity() : null );
-		$this->tracker->trackTags( $addedTags, $performer );
+		$this->tracker->trackTags( $addedTags, $performer, $this->getPerformerRequest( $performer ) );
 	}
 
 	/**
@@ -122,7 +125,13 @@ class Experiments implements
 	 * @return bool|void
 	 */
 	public function onManualLogEntryBeforePublish( $logEntry ) {
-		$this->tracker->trackLog( $logEntry->getType(), $logEntry->getSubtype(), $logEntry->getPerformerIdentity() );
+		$performer = $logEntry->getPerformerIdentity();
+		$this->tracker->trackLog(
+			$logEntry->getType(),
+			$logEntry->getSubtype(),
+			$performer,
+			$this->getPerformerRequest( $performer )
+		);
 	}
 
 	public function onSpecialPageBeforeExecute( $special, $subPage ) {
@@ -135,6 +144,15 @@ class Experiments implements
 	public function onApiCheckCanExecute( $module, $user, &$message ) {
 		$this->tracker->trackApiModule( $module->getModulePath(), $user, $module->getRequest() );
 		return true;
+	}
+
+	private function getPerformerRequest( ?UserIdentity $performer ): ?WebRequest {
+		if ( !$performer || MW_ENTRY_POINT === 'cli' ) {
+			return null;
+		}
+
+		$request = RequestContext::getMain()->getRequest();
+		return $request->getSession()->getUser()->getName() === $performer->getName() ? $request : null;
 	}
 
 	/**

@@ -49,6 +49,19 @@ class MetricTest extends MediaWikiUnitTestCase {
 		$this->assertFalse( $api->matchesApiModule( 'edit' ) );
 	}
 
+	public function testClientEvent(): void {
+		$client = $this->newMetric( [ 'type' => 'event', 'client' => true ] );
+		$this->assertTrue( $client->isClientEvent() );
+		$this->assertSame( [ 'type' => 'event', 'client' => true ], $client->toArray() );
+
+		$server = $this->newMetric( [ 'type' => 'event' ] );
+		$this->assertFalse( $server->isClientEvent() );
+		$this->assertSame( [ 'type' => 'event' ], $server->toArray() );
+
+		$this->assertFalse( $this->newMetric( [ 'type' => 'edit', 'client' => true ] )->isClientEvent() );
+		$this->assertFalse( $this->newMetric( [ 'type' => 'event', 'client' => 'yes' ] )->isClientEvent() );
+	}
+
 	public function testInvalid(): void {
 		$problems = [];
 		$this->assertNull( Metric::newFromArray( 'Bad Name', 'edit', $problems ) );
