@@ -1,0 +1,27 @@
+@import 'mediawiki.skin.variables.less';
+
+.wo-exp-root {
+	min-height: 320px;
+}
+
+.client-js .wo-exp-root > .wo-exp-fallback {
+	opacity: 0.6;
+}
+
+.wo-exp-fallback {
+	max-width: 760px;
+}
+
+dl.wo-exp-fallback {
+	display: grid;
+	grid-template-columns: max-content 1fr;
+	gap: @spacing-25 @spacing-150;
+
+	dt {
+		font-weight: @font-weight-bold;
+	}
+
+	dd {
+		margin: 0;
+	}
+}

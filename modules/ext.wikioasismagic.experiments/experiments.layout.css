@@ -1,0 +1,21 @@
+@container ( max-width: 560px ) {
+	.wo-exp-grid {
+		grid-template-columns: 1fr;
+	}
+
+	.wo-exp-dl {
+		grid-template-columns: 1fr;
+	}
+
+	.wo-exp-dl dd {
+		margin-bottom: 8px;
+	}
+
+	.wo-exp-savebar {
+		position: static;
+	}
+
+	.wo-exp-weights__action {
+		display: none;
+	}
+}

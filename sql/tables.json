@@ -1,0 +1,347 @@
+[
+	{
+		"name": "wo_experiment_state",
+		"columns": [
+			{
+				"name": "woes_experiment",
+				"type": "binary",
+				"options": {
+					"notnull": true,
+					"length": 64
+				}
+			},
+			{
+				"name": "woes_state",
+				"type": "blob",
+				"options": {
+					"notnull": true,
+					"length": 65530
+				}
+			},
+			{
+				"name": "woes_user_name",
+				"type": "binary",
+				"options": {
+					"notnull": true,
+					"length": 255
+				}
+			},
+			{
+				"name": "woes_timestamp",
+				"type": "mwtimestamp",
+				"options": {
+					"notnull": true
+				}
+			}
+		],
+		"indexes": [],
+		"pk": [
+			"woes_experiment"
+		]
+	},
+	{
+		"name": "wo_experiment_unit",
+		"columns": [
+			{
+				"name": "wou_experiment",
+				"type": "binary",
+				"options": {
+					"notnull": true,
+					"length": 64
+				}
+			},
+			{
+				"name": "wou_unit",
+				"type": "binary",
+				"options": {
+					"notnull": true,
+					"length": 64
+				}
+			},
+			{
+				"name": "wou_variant",
+				"type": "binary",
+				"options": {
+					"notnull": true,
+					"length": 64
+				}
+			},
+			{
+				"name": "wou_enrolled",
+				"type": "mwtinyint",
+				"options": {
+					"notnull": true,
+					"length": 1,
+					"default": 0
+				}
+			},
+			{
+				"name": "wou_eligible",
+				"type": "mwtinyint",
+				"options": {
+					"notnull": true,
+					"length": 1,
+					"default": 1
+				}
+			},
+			{
+				"name": "wou_wiki",
+				"type": "binary",
+				"options": {
+					"notnull": true,
+					"length": 64
+				}
+			},
+			{
+				"name": "wou_first_seen",
+				"type": "mwtimestamp",
+				"options": {
+					"notnull": true
+				}
+			},
+			{
+				"name": "wou_updated",
+				"type": "mwtimestamp",
+				"options": {
+					"notnull": true
+				}
+			}
+		],
+		"indexes": [
+			{
+				"name": "wou_experiment_variant",
+				"columns": [
+					"wou_experiment",
+					"wou_variant",
+					"wou_first_seen"
+				],
+				"unique": false
+			}
+		],
+		"pk": [
+			"wou_experiment",
+			"wou_unit"
+		]
+	},
+	{
+		"name": "wo_experiment_event",
+		"columns": [
+			{
+				"name": "woev_experiment",
+				"type": "binary",
+				"options": {
+					"notnull": true,
+					"length": 64
+				}
+			},
+			{
+				"name": "woev_metric",
+				"type": "binary",
+				"options": {
+					"notnull": true,
+					"length": 64
+				}
+			},
+			{
+				"name": "woev_unit",
+				"type": "binary",
+				"options": {
+					"notnull": true,
+					"length": 64
+				}
+			},
+			{
+				"name": "woev_count",
+				"type": "integer",
+				"options": {
+					"notnull": true,
+					"unsigned": true,
+					"default": 0
+				}
+			},
+			{
+				"name": "woev_first",
+				"type": "mwtimestamp",
+				"options": {
+					"notnull": true
+				}
+			},
+			{
+				"name": "woev_last",
+				"type": "mwtimestamp",
+				"options": {
+					"notnull": true
+				}
+			}
+		],
+		"indexes": [
+			{
+				"name": "woev_experiment_metric_first",
+				"columns": [
+					"woev_experiment",
+					"woev_metric",
+					"woev_first"
+				],
+				"unique": false
+			}
+		],
+		"pk": [
+			"woev_experiment",
+			"woev_metric",
+			"woev_unit"
+		]
+	},
+	{
+		"name": "wo_experiment_daily",
+		"columns": [
+			{
+				"name": "woed_experiment",
+				"type": "binary",
+				"options": {
+					"notnull": true,
+					"length": 64
+				}
+			},
+			{
+				"name": "woed_metric",
+				"type": "binary",
+				"options": {
+					"notnull": true,
+					"length": 64
+				}
+			},
+			{
+				"name": "woed_day",
+				"type": "binary",
+				"options": {
+					"notnull": true,
+					"length": 8,
+					"fixed": true
+				}
+			},
+			{
+				"name": "woed_variant",
+				"type": "binary",
+				"options": {
+					"notnull": true,
+					"length": 64
+				}
+			},
+			{
+				"name": "woed_enrolled",
+				"type": "mwtinyint",
+				"options": {
+					"notnull": true,
+					"length": 1,
+					"default": 0
+				}
+			},
+			{
+				"name": "woed_count",
+				"type": "integer",
+				"options": {
+					"notnull": true,
+					"unsigned": true,
+					"default": 0
+				}
+			}
+		],
+		"indexes": [],
+		"pk": [
+			"woed_experiment",
+			"woed_metric",
+			"woed_day",
+			"woed_variant",
+			"woed_enrolled"
+		]
+	},
+	{
+		"name": "wo_experiment_extension",
+		"columns": [
+			{
+				"name": "woee_wiki",
+				"type": "binary",
+				"options": {
+					"notnull": true,
+					"length": 64
+				}
+			},
+			{
+				"name": "woee_extension",
+				"type": "binary",
+				"options": {
+					"notnull": true,
+					"length": 64
+				}
+			},
+			{
+				"name": "woee_experiment",
+				"type": "binary",
+				"options": {
+					"notnull": true,
+					"length": 64
+				}
+			},
+			{
+				"name": "woee_timestamp",
+				"type": "mwtimestamp",
+				"options": {
+					"notnull": true
+				}
+			}
+		],
+		"indexes": [
+			{
+				"name": "woee_experiment",
+				"columns": [
+					"woee_experiment"
+				],
+				"unique": false
+			}
+		],
+		"pk": [
+			"woee_wiki",
+			"woee_extension"
+		]
+	},
+	{
+		"name": "wo_experiment_sync",
+		"columns": [
+			{
+				"name": "wosy_experiment",
+				"type": "binary",
+				"options": {
+					"notnull": true,
+					"length": 64
+				}
+			},
+			{
+				"name": "wosy_fingerprint",
+				"type": "binary",
+				"options": {
+					"notnull": true,
+					"length": 40
+				}
+			},
+			{
+				"name": "wosy_state",
+				"type": "blob",
+				"options": {
+					"notnull": true,
+					"length": 65530
+				}
+			},
+			{
+				"name": "wosy_timestamp",
+				"type": "mwtimestamp",
+				"options": {
+					"notnull": true
+				}
+			}
+		],
+		"indexes": [],
+		"pk": [
+			"wosy_experiment"
+		]
+	}
+]

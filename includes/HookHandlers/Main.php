@@ -14,7 +14,6 @@ use MediaWiki\Extension\AbuseFilter\Hooks\AbuseFilterShouldFilterActionHook;
 use MediaWiki\Extension\AbuseFilter\Variables\VariableHolder;
 use MediaWiki\Extension\CentralAuth\User\CentralAuthUser;
 use MediaWiki\Hook\BeforePageDisplayHook;
-use MediaWiki\Hook\BlockIpCompleteHook;
 use MediaWiki\Hook\ContributionsToolLinksHook;
 use MediaWiki\Hook\GetLocalURL__InternalHook;
 use MediaWiki\Hook\MimeMagicInitHook;
@@ -51,7 +50,6 @@ use Wikimedia\Rdbms\ILBFactory;
 class Main implements
 	BeforePageDisplayHook,
 	AbuseFilterShouldFilterActionHook,
-	BlockIpCompleteHook,
 	ContributionsToolLinksHook,
 	CreateWikiCreationHook,
 	CreateWikiStatePrivateHook,

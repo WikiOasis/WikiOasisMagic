@@ -11,7 +11,7 @@
 		"Southparkfan",
 		"Universal Omega",
 		"Waki285",
-        "Zippybonzo"
+		"Zippybonzo"
 	],
 	"url": "https://github.com/WikiOasis/WikiOasisMagic",
 	"descriptionmsg": "wikioasismagic-description",
@@ -29,10 +29,16 @@
 			"i18n/wikioasis"
 		]
 	},
+	"ExtensionMessagesFiles": {
+		"WikiOasisMagicAliases": "WikiOasisMagicAliases.php"
+	},
 	"AutoloadNamespaces": {
 		"WikiOasis\\WikiOasisMagic\\": "includes/",
 		"WikiOasis\\WikiOasisMagic\\Jobs\\": "includes/Jobs/",
 		"WikiOasis\\WikiOasisMagic\\Maintenance\\": "maintenance/"
+	},
+	"TestAutoloadNamespaces": {
+		"WikiOasis\\WikiOasisMagic\\Tests\\": "tests/phpunit/"
 	},
 	"Hooks": {
 		"AbuseFilterShouldFilterAction": {
@@ -44,33 +50,37 @@
 		"LocalFilePurgeThumbnails": {
 			"handler": "CloudflarePurge"
 		},
-		"PageDeleteComplete": {
-			"handler": "CloudflarePurge"
-		},
+		"PageDeleteComplete": [
+			"CloudflarePurge",
+			"Onboarding"
+		],
 		"PageMoveComplete": {
 			"handler": "CloudflarePurge"
 		},
-		"PageSaveComplete": {
-			"handler": "CloudflarePurge"
-		},
+		"PageSaveComplete": [
+			"CloudflarePurge",
+			"Onboarding",
+			"Experiments"
+		],
 		"ContributionsToolLinks": {
 			"handler": "Main"
 		},
-		"CreateWikiCreation": {
-			"handler": "Main"
-		},
+		"CreateWikiCreation": [
+			"Main",
+			"Experiments"
+		],
 		"CreateWikiDeletion": {
 			"handler": "CloudflarePurge"
 		},
-        "CreateWikiCreationExtraFields": {
-            "handler": "RequestWiki"
-        },
+		"CreateWikiCreationExtraFields": {
+			"handler": "RequestWiki"
+		},
 		"CreateWikiStatePrivate": {
 			"handler": "Main"
 		},
-        "CreateWikiStatePublic": {
-            "handler": "Main"
-        },
+		"CreateWikiStatePublic": {
+			"handler": "Main"
+		},
 		"CreateWikiTables": {
 			"handler": "Main"
 		},
@@ -83,24 +93,25 @@
 		"GlobalUserPageWikis": {
 			"handler": "Main"
 		},
-        "ImportDumpJobGetFile": {
+		"ImportDumpJobGetFile": {
 			"handler": "Main"
 		},
-		"ManageWikiDataStoreBuilder": {
-			"handler": "CloudflarePurge"
-		},
+		"ManageWikiDataStoreBuilder": [
+			"Experiments",
+			"CloudflarePurge"
+		],
 		"MessageCacheFetchOverrides": {
 			"handler": "Main"
 		},
 		"MimeMagicInit": {
 			"handler": "Main"
 		},
-        "RequestWikiFormDescriptorModify": {
-            "handler": "RequestWiki"
-        },
-        "RequestWikiQueueFormDescriptorModify": {
-            "handler": "RequestWiki"
-        },
+		"RequestWikiFormDescriptorModify": {
+			"handler": "RequestWiki"
+		},
+		"RequestWikiQueueFormDescriptorModify": {
+			"handler": "RequestWiki"
+		},
 		"SiteNoticeAfter": {
 			"handler": "Main"
 		},
@@ -110,10 +121,48 @@
 		"TitleReadWhitelist": {
 			"handler": "Main"
 		},
-		"BeforePageDisplay": {
-			"handler": "Main"
+		"BeforePageDisplay": [
+			"Main",
+			"Onboarding"
+		],
+		"AuthChangeFormFields": {
+			"handler": "Onboarding"
+		},
+		"CentralAuthPostLoginRedirect": {
+			"handler": "Onboarding"
+		},
+		"EditFilterMergedContent": {
+			"handler": "Onboarding"
+		},
+		"GetPreferences": {
+			"handler": "Onboarding"
+		},
+		"LoadExtensionSchemaUpdates": {
+			"handler": "Experiments"
+		},
+		"LocalUserCreated": {
+			"handler": "Onboarding"
+		},
+		"ManualLogEntryBeforePublish": [
+			"Onboarding",
+			"Experiments"
+		],
+		"PostLoginRedirect": {
+			"handler": "Onboarding"
+		},
+		"SpecialCreateAccountBenefits": {
+			"handler": "Onboarding"
+		},
+		"ApiCheckCanExecute": {
+			"handler": "Experiments"
+		},
+		"ChangeTagsAfterUpdateTags": {
+			"handler": "Experiments"
+		},
+		"SpecialPageBeforeExecute": {
+			"handler": "Experiments"
 		}
-    },
+	},
 	"HookHandlers": {
 		"Main": {
 			"class": "WikiOasis\\WikiOasisMagic\\HookHandlers\\Main",
@@ -135,8 +184,137 @@
 		},
 		"RequestWiki": {
 			"class": "WikiOasis\\WikiOasisMagic\\HookHandlers\\RequestWiki"
+		},
+		"Onboarding": {
+			"class": "WikiOasis\\WikiOasisMagic\\HookHandlers\\Onboarding",
+			"services": [
+				"WikiOasisMagic.OnboardingEnvironment",
+				"WikiOasisMagic.ExperimentManager",
+				"WikiOasisMagic.ExperimentTracker",
+				"WikiOasisMagic.OnboardingMetrics",
+				"WikiOasisMagic.OnboardingSurveyLoader",
+				"UserEditTracker",
+				"UserFactory"
+			]
+		},
+		"Experiments": {
+			"class": "WikiOasis\\WikiOasisMagic\\HookHandlers\\Experiments",
+			"services": [
+				"WikiOasisMagic.ExperimentTracker",
+				"WikiOasisMagic.WikiRollout"
+			]
 		}
 	},
+	"SpecialPages": {
+		"Welcome": {
+			"class": "WikiOasis\\WikiOasisMagic\\Specials\\SpecialWelcome",
+			"services": [
+				"WikiOasisMagic.OnboardingEnvironment",
+				"WikiOasisMagic.ExperimentManager",
+				"WikiOasisMagic.OnboardingMetrics",
+				"WikiOasisMagic.OnboardingSurveyLoader",
+				"WikiOasisMagic.OnboardingSurveyResponses",
+				"WikiOasisMagic.OnboardingIcons",
+				"LanguageNameUtils",
+				"LanguageFallback",
+				"LinkBatchFactory"
+			]
+		},
+		"Experiments": {
+			"class": "WikiOasis\\WikiOasisMagic\\Specials\\SpecialExperiments",
+			"services": [
+				"WikiOasisMagic.ExperimentManager",
+				"WikiOasisMagic.ExperimentPresenter",
+				"WikiOasisMagic.ExperimentStateStore",
+				"WikiOasisMagic.ExperimentDataStore",
+				"WikiOasisMagic.WikiFarm"
+			]
+		}
+	},
+	"APIModules": {
+		"wikioasisonboarding": {
+			"class": "WikiOasis\\WikiOasisMagic\\Api\\ApiWikiOasisOnboarding",
+			"services": [
+				"WikiOasisMagic.OnboardingEnvironment",
+				"WikiOasisMagic.ExperimentManager",
+				"WikiOasisMagic.OnboardingMetrics",
+				"WikiOasisMagic.OnboardingSurveyLoader",
+				"WikiOasisMagic.OnboardingSurveyResponses"
+			]
+		},
+		"wikioasisexperiments": {
+			"class": "WikiOasis\\WikiOasisMagic\\Api\\ApiExperiments",
+			"services": [
+				"WikiOasisMagic.ExperimentManager",
+				"WikiOasisMagic.ExperimentPresenter"
+			]
+		},
+		"wikioasisexperimentsave": {
+			"class": "WikiOasis\\WikiOasisMagic\\Api\\ApiExperimentSave",
+			"services": [
+				"WikiOasisMagic.ExperimentManager",
+				"WikiOasisMagic.ExperimentAdmin",
+				"WikiOasisMagic.ExperimentPresenter",
+				"WikiOasisMagic.WikiFarm"
+			]
+		}
+	},
+	"AvailableRights": [
+		"experiments-manage"
+	],
+	"LogTypes": [
+		"experiment"
+	],
+	"LogNames": {
+		"experiment": "log-name-experiment"
+	},
+	"LogHeaders": {
+		"experiment": "log-description-experiment"
+	},
+	"LogActionsHandlers": {
+		"experiment/*": "MediaWiki\\Logging\\LogFormatter"
+	},
+	"LogRestrictions": {
+		"experiment": "experiments-manage"
+	},
+	"ActionFilteredLogs": {
+		"experiment": {
+			"update": [
+				"update"
+			],
+			"reset": [
+				"reset"
+			]
+		}
+	},
+	"RateLimits": {
+		"wikioasisonboarding-event": {
+			"user": [
+				120,
+				60
+			],
+			"newbie": [
+				120,
+				60
+			]
+		},
+		"wikioasisonboarding-submit": {
+			"user": [
+				10,
+				3600
+			],
+			"newbie": [
+				10,
+				3600
+			]
+		}
+	},
+	"DefaultUserOptions": {
+		"wikioasismagic-onboarding": ""
+	},
+	"DatabaseVirtualDomains": [
+		"virtual-wikioasismagic"
+	],
 	"config": {
 		"WikiOasisMagicAccessIdsMap": {
 			"description": "Array. Map of wiki database names to an array of CentralAuth user IDs which are allowed to read that wiki. Users not in the list have the read right removed.",
@@ -146,14 +324,14 @@
 			"description": "Array. Memcached servers to use for clearing memcached keys when a wiki is deleted or renamed.",
 			"value": []
 		},
-        "WikiOasisMagicReportsBlockAlertKeywords": {
-          "description": "Array. Words in block reasons which trigger a report being sent to TSPortal.",
-          "value": []
-        },
-        "WikiOasisMagicReportsWriteKey": {
-          "description": "String. TSPortal write key to be used when connecting to it.",
-          "value": ""
-        },
+		"WikiOasisMagicReportsBlockAlertKeywords": {
+			"description": "Array. Words in block reasons which trigger a report being sent to TSPortal.",
+			"value": []
+		},
+		"WikiOasisMagicReportsWriteKey": {
+			"description": "String. TSPortal write key to be used when connecting to it.",
+			"value": ""
+		},
 		"WikiOasisMagicCloudflareAPIToken": {
 			"description": "Cloudflare API Token used for cache purging.",
 			"public": false,
@@ -162,6 +340,587 @@
 		"WikiOasisMagicCloudflareZoneID": {
 			"description": "Cloudflare Zone ID for this wiki's domain.",
 			"public": false,
+			"value": ""
+		},
+		"WikiOasisMagicEnableNewOnboarding": {
+			"description": "Bool. The new signup screen, the redirect to Special:Welcome after signup and their metrics on this wiki. Wiki experiments can switch it for a share of wikis.",
+			"value": false
+		},
+		"WikiOasisMagicCentralWiki": {
+			"description": "String|null. Database name of the central wiki (Meta): where experiments are managed, what \"@central\" matches and where wikis are requested. Null asks CreateWiki.",
+			"value": null
+		},
+		"WikiOasisMagicExperiments": {
+			"description": "Array. Experiments keyed by name; see includes/Experiments/Experiment.php for the format and README.md for examples. Their rollout is managed on Special:Experiments.",
+			"value": {
+				"signup": {
+					"label": {
+						"msg": "wikioasismagic-experiment-signup-label"
+					},
+					"description": {
+						"msg": "wikioasismagic-experiment-signup-description"
+					},
+					"unit": "browser",
+					"preview": "Special:CreateAccount",
+					"active": false,
+					"rollout": 100,
+					"default": "treatment",
+					"variants": {
+						"control": 50,
+						"treatment": 50
+					},
+					"salt": "signup-v1",
+					"window": 1,
+					"metrics": {
+						"account": {
+							"type": "event",
+							"label": {
+								"msg": "wikioasismagic-experiment-signup-metric-account"
+							}
+						}
+					},
+					"primary": "account"
+				},
+				"onboarding": {
+					"label": {
+						"msg": "wikioasismagic-experiment-onboarding-label"
+					},
+					"description": {
+						"msg": "wikioasismagic-experiment-onboarding-description"
+					},
+					"unit": "user",
+					"preview": "Special:Welcome",
+					"active": false,
+					"rollout": 100,
+					"default": "treatment",
+					"variants": {
+						"control": 50,
+						"treatment": 50
+					},
+					"salt": "onboarding-v1",
+					"window": 30,
+					"metrics": {
+						"edit": {
+							"type": "edit",
+							"label": {
+								"msg": "wikioasismagic-experiment-onboarding-metric-edit"
+							}
+						},
+						"content_edit": {
+							"type": "edit",
+							"namespaces": [
+								0
+							],
+							"label": {
+								"msg": "wikioasismagic-experiment-onboarding-metric-content-edit"
+							}
+						},
+						"survey": {
+							"type": "event",
+							"label": {
+								"msg": "wikioasismagic-experiment-onboarding-metric-survey"
+							}
+						},
+						"wiki_request": {
+							"type": "log",
+							"log": "farmer/requestwiki",
+							"label": {
+								"msg": "wikioasismagic-experiment-onboarding-metric-wiki-request"
+							}
+						},
+						"wiki_approved": {
+							"type": "event",
+							"label": {
+								"msg": "wikioasismagic-experiment-onboarding-metric-wiki-approved"
+							}
+						}
+					},
+					"primary": "edit"
+				}
+			},
+			"merge_strategy": "array_plus_2d"
+		},
+		"WikiOasisMagicExperimentsDashboardUrl": {
+			"description": "String. Grafana dashboard linked from Special:Experiments; \"{experiment}\" is replaced by the experiment name.",
+			"value": ""
+		},
+		"WikiOasisMagicExperimentsHashSecret": {
+			"description": "String. Key for the HMAC that stores users and browsers in the experiment tables. Must be the same on every wiki; changing it detaches what was stored. Empty uses $wgSecretKey.",
+			"value": ""
+		},
+		"WikiOasisMagicExperimentsRetentionDays": {
+			"description": "Int. How many days PruneExperimentData keeps a unit after it was last seen or last did something, and daily counts.",
+			"value": 180
+		},
+		"WikiOasisMagicOnboardingSurveys": {
+			"description": "Array. Survey definitions keyed by name. 'central' is used on the central wiki and 'local' everywhere else, unless an experiment variant names another survey or the wiki has a valid MediaWiki:WikiOasisOnboarding.json. See includes/Onboarding/SurveyValidator.php for the format. Options with action 'createwiki' or 'importwiki' are dropped outside the central wiki.",
+			"value": {
+				"central": {
+					"questions": [
+						{
+							"id": "goal",
+							"type": "multi",
+							"style": "cards",
+							"label": {
+								"msg": "wikioasismagic-onboarding-q-goal-central"
+							},
+							"help": {
+								"msg": "wikioasismagic-onboarding-q-goal-help"
+							},
+							"options": [
+								{
+									"id": "create",
+									"label": {
+										"msg": "wikioasismagic-onboarding-o-create"
+									},
+									"description": {
+										"msg": "wikioasismagic-onboarding-o-create-desc"
+									},
+									"icon": "cdxIconAdd",
+									"action": "createwiki"
+								},
+								{
+									"id": "move",
+									"label": {
+										"msg": "wikioasismagic-onboarding-o-move"
+									},
+									"description": {
+										"msg": "wikioasismagic-onboarding-o-move-desc"
+									},
+									"icon": "cdxIconMove",
+									"action": "importwiki"
+								},
+								{
+									"id": "edit",
+									"label": {
+										"msg": "wikioasismagic-onboarding-o-edit"
+									},
+									"description": {
+										"msg": "wikioasismagic-onboarding-o-edit-desc"
+									},
+									"icon": "cdxIconEdit"
+								},
+								{
+									"id": "read",
+									"label": {
+										"msg": "wikioasismagic-onboarding-o-read"
+									},
+									"description": {
+										"msg": "wikioasismagic-onboarding-o-read-desc"
+									},
+									"icon": "cdxIconArticles"
+								},
+								{
+									"id": "volunteer",
+									"label": {
+										"msg": "wikioasismagic-onboarding-o-volunteer"
+									},
+									"description": {
+										"msg": "wikioasismagic-onboarding-o-volunteer-desc"
+									},
+									"icon": "cdxIconUserGroup"
+								},
+								{
+									"id": "other",
+									"label": {
+										"msg": "wikioasismagic-onboarding-o-other"
+									},
+									"description": {
+										"msg": "wikioasismagic-onboarding-o-other-desc"
+									},
+									"icon": "cdxIconEllipsis",
+									"freeText": true
+								}
+							]
+						},
+						{
+							"id": "experience",
+							"type": "single",
+							"style": "list",
+							"label": {
+								"msg": "wikioasismagic-onboarding-q-experience"
+							},
+							"help": {
+								"msg": "wikioasismagic-onboarding-q-experience-help"
+							},
+							"options": [
+								{
+									"id": "new",
+									"label": {
+										"msg": "wikioasismagic-onboarding-o-experience-new"
+									},
+									"description": {
+										"msg": "wikioasismagic-onboarding-o-experience-new-desc"
+									},
+									"tips": true
+								},
+								{
+									"id": "edited",
+									"label": {
+										"msg": "wikioasismagic-onboarding-o-experience-edited"
+									},
+									"description": {
+										"msg": "wikioasismagic-onboarding-o-experience-edited-desc"
+									}
+								},
+								{
+									"id": "admin",
+									"label": {
+										"msg": "wikioasismagic-onboarding-o-experience-admin"
+									},
+									"description": {
+										"msg": "wikioasismagic-onboarding-o-experience-admin-desc"
+									}
+								}
+							]
+						}
+					],
+					"cards": [
+						{
+							"id": "directory",
+							"title": {
+								"msg": "wikioasismagic-onboarding-card-directory"
+							},
+							"description": {
+								"msg": "wikioasismagic-onboarding-card-directory-desc"
+							},
+							"icon": "cdxIconSearch",
+							"url": "{directory}"
+						},
+						{
+							"id": "requests",
+							"title": {
+								"msg": "wikioasismagic-onboarding-card-requests"
+							},
+							"description": {
+								"msg": "wikioasismagic-onboarding-card-requests-desc"
+							},
+							"icon": "cdxIconFlag",
+							"page": "Special:RequestWikiQueue",
+							"when": {
+								"goal": [
+									"volunteer"
+								]
+							}
+						},
+						{
+							"id": "community",
+							"title": {
+								"msg": "wikioasismagic-onboarding-card-community"
+							},
+							"description": {
+								"msg": "wikioasismagic-onboarding-card-community-desc"
+							},
+							"icon": "cdxIconUserGroup",
+							"page": "Project:Community portal",
+							"requiresExists": true
+						},
+						{
+							"id": "userpage",
+							"title": {
+								"msg": "wikioasismagic-onboarding-card-userpage"
+							},
+							"description": {
+								"msg": "wikioasismagic-onboarding-card-userpage-desc"
+							},
+							"icon": "cdxIconUserAvatar",
+							"page": "Special:MyPage"
+						},
+						{
+							"id": "preferences",
+							"title": {
+								"msg": "wikioasismagic-onboarding-card-preferences"
+							},
+							"description": {
+								"msg": "wikioasismagic-onboarding-card-preferences-desc"
+							},
+							"icon": "cdxIconSettings",
+							"page": "Special:Preferences"
+						}
+					]
+				},
+				"local": {
+					"questions": [
+						{
+							"id": "goal",
+							"type": "multi",
+							"style": "cards",
+							"label": {
+								"msg": "wikioasismagic-onboarding-q-goal-local"
+							},
+							"help": {
+								"msg": "wikioasismagic-onboarding-q-goal-help"
+							},
+							"options": [
+								{
+									"id": "fix",
+									"label": {
+										"msg": "wikioasismagic-onboarding-o-fix"
+									},
+									"description": {
+										"msg": "wikioasismagic-onboarding-o-fix-desc"
+									},
+									"icon": "cdxIconEdit"
+								},
+								{
+									"id": "add",
+									"label": {
+										"msg": "wikioasismagic-onboarding-o-add"
+									},
+									"description": {
+										"msg": "wikioasismagic-onboarding-o-add-desc"
+									},
+									"icon": "cdxIconArticles"
+								},
+								{
+									"id": "write",
+									"label": {
+										"msg": "wikioasismagic-onboarding-o-write"
+									},
+									"description": {
+										"msg": "wikioasismagic-onboarding-o-write-desc"
+									},
+									"icon": "cdxIconAdd"
+								},
+								{
+									"id": "media",
+									"label": {
+										"msg": "wikioasismagic-onboarding-o-media"
+									},
+									"description": {
+										"msg": "wikioasismagic-onboarding-o-media-desc"
+									},
+									"icon": "cdxIconImage"
+								},
+								{
+									"id": "community",
+									"label": {
+										"msg": "wikioasismagic-onboarding-o-community"
+									},
+									"description": {
+										"msg": "wikioasismagic-onboarding-o-community-desc"
+									},
+									"icon": "cdxIconSpeechBubbles"
+								},
+								{
+									"id": "browse",
+									"label": {
+										"msg": "wikioasismagic-onboarding-o-browse"
+									},
+									"description": {
+										"msg": "wikioasismagic-onboarding-o-browse-desc"
+									},
+									"icon": "cdxIconSearch"
+								},
+								{
+									"id": "other",
+									"label": {
+										"msg": "wikioasismagic-onboarding-o-other"
+									},
+									"description": {
+										"msg": "wikioasismagic-onboarding-o-other-desc"
+									},
+									"icon": "cdxIconEllipsis",
+									"freeText": true
+								}
+							]
+						},
+						{
+							"id": "experience",
+							"type": "single",
+							"style": "list",
+							"label": {
+								"msg": "wikioasismagic-onboarding-q-experience"
+							},
+							"help": {
+								"msg": "wikioasismagic-onboarding-q-experience-help"
+							},
+							"options": [
+								{
+									"id": "new",
+									"label": {
+										"msg": "wikioasismagic-onboarding-o-experience-new"
+									},
+									"description": {
+										"msg": "wikioasismagic-onboarding-o-experience-new-desc"
+									},
+									"tips": true
+								},
+								{
+									"id": "edited",
+									"label": {
+										"msg": "wikioasismagic-onboarding-o-experience-edited"
+									},
+									"description": {
+										"msg": "wikioasismagic-onboarding-o-experience-edited-desc"
+									}
+								},
+								{
+									"id": "admin",
+									"label": {
+										"msg": "wikioasismagic-onboarding-o-experience-admin"
+									},
+									"description": {
+										"msg": "wikioasismagic-onboarding-o-experience-admin-desc"
+									}
+								}
+							]
+						}
+					],
+					"cards": [
+						{
+							"id": "random",
+							"title": {
+								"msg": "wikioasismagic-onboarding-card-random"
+							},
+							"description": {
+								"msg": "wikioasismagic-onboarding-card-random-desc"
+							},
+							"icon": "cdxIconArticles",
+							"page": "Special:Random",
+							"when": {
+								"goal": [
+									"fix",
+									"add",
+									"browse"
+								]
+							}
+						},
+						{
+							"id": "shortpages",
+							"title": {
+								"msg": "wikioasismagic-onboarding-card-shortpages"
+							},
+							"description": {
+								"msg": "wikioasismagic-onboarding-card-shortpages-desc"
+							},
+							"icon": "cdxIconListBullet",
+							"page": "Special:ShortPages",
+							"when": {
+								"goal": [
+									"add"
+								]
+							}
+						},
+						{
+							"id": "wantedpages",
+							"title": {
+								"msg": "wikioasismagic-onboarding-card-wantedpages"
+							},
+							"description": {
+								"msg": "wikioasismagic-onboarding-card-wantedpages-desc"
+							},
+							"icon": "cdxIconAdd",
+							"page": "Special:WantedPages",
+							"when": {
+								"goal": [
+									"write"
+								]
+							}
+						},
+						{
+							"id": "upload",
+							"title": {
+								"msg": "wikioasismagic-onboarding-card-upload"
+							},
+							"description": {
+								"msg": "wikioasismagic-onboarding-card-upload-desc"
+							},
+							"icon": "cdxIconUpload",
+							"page": "Special:Upload",
+							"when": {
+								"goal": [
+									"media"
+								]
+							}
+						},
+						{
+							"id": "communityportal",
+							"title": {
+								"msg": "wikioasismagic-onboarding-card-communityportal"
+							},
+							"description": {
+								"msg": "wikioasismagic-onboarding-card-communityportal-desc"
+							},
+							"icon": "cdxIconUserGroup",
+							"page": "Project:Community portal",
+							"requiresExists": true,
+							"when": {
+								"goal": [
+									"community"
+								]
+							}
+						},
+						{
+							"id": "recentchanges",
+							"title": {
+								"msg": "wikioasismagic-onboarding-card-recentchanges"
+							},
+							"description": {
+								"msg": "wikioasismagic-onboarding-card-recentchanges-desc"
+							},
+							"icon": "cdxIconHistory",
+							"page": "Special:RecentChanges",
+							"when": {
+								"goal": [
+									"community",
+									"browse"
+								]
+							}
+						},
+						{
+							"id": "help",
+							"title": {
+								"msg": "wikioasismagic-onboarding-card-help"
+							},
+							"description": {
+								"msg": "wikioasismagic-onboarding-card-help-desc"
+							},
+							"icon": "cdxIconHelp",
+							"url": "https://www.mediawiki.org/wiki/Special:MyLanguage/Help:Editing_pages",
+							"when": {
+								"experience": [
+									"new"
+								]
+							}
+						},
+						{
+							"id": "preferences",
+							"title": {
+								"msg": "wikioasismagic-onboarding-card-preferences"
+							},
+							"description": {
+								"msg": "wikioasismagic-onboarding-card-preferences-desc"
+							},
+							"icon": "cdxIconSettings",
+							"page": "Special:Preferences"
+						},
+						{
+							"id": "ownwiki",
+							"title": {
+								"msg": "wikioasismagic-onboarding-card-ownwiki"
+							},
+							"description": {
+								"msg": "wikioasismagic-onboarding-card-ownwiki-desc"
+							},
+							"icon": "cdxIconAdd",
+							"page": "Special:Welcome/wiki",
+							"central": true
+						}
+					]
+				}
+			}
+		},
+		"WikiOasisMagicOnboardingAllowLocalSurvey": {
+			"description": "Bool. Whether MediaWiki:WikiOasisOnboarding.json may replace this wiki's survey.",
+			"value": true
+		},
+		"WikiOasisMagicOnboardingAttributionDays": {
+			"description": "Int. For how many days after registering a user's edits and wiki requests are counted as conversions for the variant they were assigned.",
+			"value": 30
+		},
+		"WikiOasisMagicOnboardingDirectoryUrl": {
+			"description": "String. URL of a directory of wikis. Used while requesting a wiki and by survey cards whose url starts with {directory}; those cards are hidden when this is empty.",
 			"value": ""
 		}
 	},
@@ -174,14 +933,462 @@
 			"scripts": [
 				"ext.wikioasismagic.simpleBlogPageFix.js"
 			]
+		},
+		"ext.wikioasismagic.codex.styles": {
+			"class": "MediaWiki\\ResourceLoader\\CodexModule",
+			"codexStyleOnly": true,
+			"codexComponents": [
+				"CdxButton",
+				"CdxCard",
+				"CdxCheckbox",
+				"CdxField",
+				"CdxLabel",
+				"CdxMessage",
+				"CdxRadio",
+				"CdxSelect",
+				"CdxTextArea",
+				"CdxTextInput",
+				"CdxThumbnail",
+				"CdxToggleSwitch"
+			]
+		},
+		"ext.wikioasismagic.onboarding.styles": {
+			"styles": [
+				"ext.wikioasismagic.onboarding/onboarding.less",
+				"ext.wikioasismagic.onboarding/onboarding.layout.css"
+			]
+		},
+		"ext.wikioasismagic.onboarding": {
+			"packageFiles": [
+				"ext.wikioasismagic.onboarding/onboarding.js",
+				{
+					"name": "ext.wikioasismagic.onboarding/icons.json",
+					"callback": "MediaWiki\\ResourceLoader\\CodexModule::getIcons",
+					"callbackParam": [
+						"cdxIconAlert",
+						"cdxIconCheck",
+						"cdxIconEdit",
+						"cdxIconSuccess"
+					]
+				}
+			],
+			"messages": [
+				"wikioasismagic-onboarding-continue",
+				"wikioasismagic-onboarding-continue-wiki",
+				"wikioasismagic-onboarding-done-lead",
+				"wikioasismagic-onboarding-done-lead-email",
+				"wikioasismagic-onboarding-edit",
+				"wikioasismagic-onboarding-err-category",
+				"wikioasismagic-onboarding-err-network",
+				"wikioasismagic-onboarding-err-policy",
+				"wikioasismagic-onboarding-err-purpose",
+				"wikioasismagic-onboarding-err-server",
+				"wikioasismagic-onboarding-err-sitename",
+				"wikioasismagic-onboarding-err-sourceurl",
+				"wikioasismagic-onboarding-flag-bio",
+				"wikioasismagic-onboarding-flag-nsfw",
+				"wikioasismagic-onboarding-flag-nsfw-primary",
+				"wikioasismagic-onboarding-preview-lead",
+				"wikioasismagic-onboarding-preview-lead-empty",
+				"wikioasismagic-onboarding-preview-name",
+				"wikioasismagic-onboarding-preview-rtl",
+				"wikioasismagic-onboarding-private",
+				"wikioasismagic-onboarding-progress",
+				"wikioasismagic-onboarding-public",
+				"wikioasismagic-onboarding-rail-group-wiki",
+				"wikioasismagic-onboarding-reason-count",
+				"wikioasismagic-onboarding-reason-count-nomin",
+				"wikioasismagic-onboarding-reason-enough",
+				"wikioasismagic-onboarding-reason-required",
+				"wikioasismagic-onboarding-reason-short",
+				"wikioasismagic-onboarding-review-address",
+				"wikioasismagic-onboarding-review-category",
+				"wikioasismagic-onboarding-review-description",
+				"wikioasismagic-onboarding-review-existing",
+				"wikioasismagic-onboarding-review-flags",
+				"wikioasismagic-onboarding-review-forking",
+				"wikioasismagic-onboarding-review-language",
+				"wikioasismagic-onboarding-review-moving",
+				"wikioasismagic-onboarding-review-name",
+				"wikioasismagic-onboarding-review-no",
+				"wikioasismagic-onboarding-review-none",
+				"wikioasismagic-onboarding-review-purpose",
+				"wikioasismagic-onboarding-review-section-name",
+				"wikioasismagic-onboarding-review-section-purpose",
+				"wikioasismagic-onboarding-review-section-settings",
+				"wikioasismagic-onboarding-review-visibility",
+				"wikioasismagic-onboarding-send",
+				"wikioasismagic-onboarding-sending",
+				"wikioasismagic-onboarding-step-account",
+				"wikioasismagic-onboarding-step-done",
+				"wikioasismagic-onboarding-step-finish",
+				"wikioasismagic-onboarding-step-survey",
+				"wikioasismagic-onboarding-step-wiki-blocked",
+				"wikioasismagic-onboarding-step-wiki-name",
+				"wikioasismagic-onboarding-step-wiki-purpose",
+				"wikioasismagic-onboarding-step-wiki-review",
+				"wikioasismagic-onboarding-step-wiki-settings",
+				"wikioasismagic-onboarding-subdomain-available",
+				"wikioasismagic-onboarding-subdomain-chars",
+				"wikioasismagic-onboarding-subdomain-checking",
+				"wikioasismagic-onboarding-subdomain-required",
+				"wikioasismagic-onboarding-subdomain-short"
+			],
+			"dependencies": [
+				"mediawiki.api",
+				"mediawiki.language",
+				"mediawiki.user",
+				"mediawiki.util"
+			]
+		},
+		"ext.wikioasismagic.signup.styles": {
+			"styles": [
+				"ext.wikioasismagic.signup/signup.less"
+			]
+		},
+		"ext.wikioasismagic.signup": {
+			"packageFiles": [
+				"ext.wikioasismagic.signup/signup.js",
+				{
+					"name": "ext.wikioasismagic.signup/icons.json",
+					"callback": "MediaWiki\\ResourceLoader\\CodexModule::getIcons",
+					"callbackParam": [
+						"cdxIconCheck",
+						"cdxIconClose",
+						"cdxIconEye",
+						"cdxIconEyeClosed"
+					]
+				}
+			],
+			"messages": [
+				"wikioasismagic-signup-hide-password",
+				"wikioasismagic-signup-rule-common",
+				"wikioasismagic-signup-rule-length",
+				"wikioasismagic-signup-rule-username",
+				"wikioasismagic-signup-show-password",
+				"wikioasismagic-signup-tab-create",
+				"wikioasismagic-signup-tab-login",
+				"wikioasismagic-signup-tabs-label"
+			],
+			"dependencies": [
+				"mediawiki.api",
+				"mediawiki.language"
+			]
+		},
+		"ext.wikioasismagic.experiments.styles": {
+			"styles": [
+				"ext.wikioasismagic.experiments.styles/experiments.styles.less"
+			]
+		},
+		"ext.wikioasismagic.experiments": {
+			"class": "MediaWiki\\ResourceLoader\\CodexModule",
+			"localBasePath": "modules/ext.wikioasismagic.experiments",
+			"remoteExtPath": "WikiOasisMagic/modules/ext.wikioasismagic.experiments",
+			"packageFiles": [
+				"init.js",
+				"components/App.vue",
+				"components/ExperimentList.vue",
+				"components/ExperimentCard.vue",
+				"components/ExperimentDetail.vue",
+				"components/OverviewPanel.vue",
+				"components/RolloutPanel.vue",
+				"components/ResultsPanel.vue",
+				"components/HistoryPanel.vue",
+				"components/StatusChip.vue",
+				"components/SplitBar.vue",
+				"components/LineChart.vue",
+				"components/OverridesNotice.vue",
+				"describe.js",
+				"format.js",
+				"stats.js",
+				"swatches.js",
+				{
+					"name": "components/icons.json",
+					"callback": "MediaWiki\\ResourceLoader\\CodexModule::getIcons",
+					"callbackParam": [
+						"cdxIconAlert",
+						"cdxIconArrowPrevious",
+						"cdxIconBrowser",
+						"cdxIconChart",
+						"cdxIconClock",
+						"cdxIconGlobe",
+						"cdxIconLabFlask",
+						"cdxIconLinkExternal",
+						"cdxIconPause",
+						"cdxIconPuzzle",
+						"cdxIconSettings",
+						"cdxIconStop",
+						"cdxIconUndo",
+						"cdxIconUserAvatar"
+					]
+				}
+			],
+			"styles": [
+				"experiments.less",
+				"experiments.layout.css"
+			],
+			"dependencies": [
+				"vue",
+				"mediawiki.api",
+				"mediawiki.language",
+				"mediawiki.util",
+				"mediawiki.jqueryMsg"
+			],
+			"codexComponents": [
+				"CdxButton",
+				"CdxChipInput",
+				"CdxDialog",
+				"CdxField",
+				"CdxIcon",
+				"CdxInfoChip",
+				"CdxMessage",
+				"CdxProgressBar",
+				"CdxRadio",
+				"CdxSearchInput",
+				"CdxSelect",
+				"CdxTab",
+				"CdxTable",
+				"CdxTabs",
+				"CdxTextInput",
+				"CdxToggleButtonGroup",
+				"CdxToggleSwitch"
+			],
+			"messages": [
+				"wikioasismagic-experiments-asconfigured",
+				"wikioasismagic-experiments-audience-browser-all",
+				"wikioasismagic-experiments-audience-note-all",
+				"wikioasismagic-experiments-audience-note-existing",
+				"wikioasismagic-experiments-audience-note-new",
+				"wikioasismagic-experiments-audience-user-all",
+				"wikioasismagic-experiments-audience-user-existing",
+				"wikioasismagic-experiments-audience-user-new",
+				"wikioasismagic-experiments-audience-wiki-all",
+				"wikioasismagic-experiments-audience-wiki-existing",
+				"wikioasismagic-experiments-audience-wiki-new",
+				"wikioasismagic-experiments-back",
+				"wikioasismagic-experiments-cancel",
+				"wikioasismagic-experiments-card-default",
+				"wikioasismagic-experiments-card-enrolled",
+				"wikioasismagic-experiments-card-exposed-browser",
+				"wikioasismagic-experiments-card-exposed-user",
+				"wikioasismagic-experiments-card-exposed-wiki",
+				"wikioasismagic-experiments-changes",
+				"wikioasismagic-experiments-changes-legacy",
+				"wikioasismagic-experiments-changes-none",
+				"wikioasismagic-experiments-chart-adoption",
+				"wikioasismagic-experiments-chart-adoption-label",
+				"wikioasismagic-experiments-chart-events",
+				"wikioasismagic-experiments-chart-events-label",
+				"wikioasismagic-experiments-column-adopters",
+				"wikioasismagic-experiments-column-change",
+				"wikioasismagic-experiments-column-changes",
+				"wikioasismagic-experiments-column-confidence",
+				"wikioasismagic-experiments-column-events",
+				"wikioasismagic-experiments-column-first",
+				"wikioasismagic-experiments-column-group",
+				"wikioasismagic-experiments-column-last",
+				"wikioasismagic-experiments-column-metric",
+				"wikioasismagic-experiments-column-overall",
+				"wikioasismagic-experiments-column-perunit",
+				"wikioasismagic-experiments-column-preview",
+				"wikioasismagic-experiments-column-rate",
+				"wikioasismagic-experiments-column-share",
+				"wikioasismagic-experiments-column-units",
+				"wikioasismagic-experiments-column-variant",
+				"wikioasismagic-experiments-column-weight",
+				"wikioasismagic-experiments-column-wiki",
+				"wikioasismagic-experiments-confidence-baseline",
+				"wikioasismagic-experiments-confidence-little",
+				"wikioasismagic-experiments-confidence-loss",
+				"wikioasismagic-experiments-confidence-reference",
+				"wikioasismagic-experiments-confidence-unclear",
+				"wikioasismagic-experiments-confidence-win",
+				"wikioasismagic-experiments-dashboard",
+				"wikioasismagic-experiments-data-unavailable",
+				"wikioasismagic-experiments-default",
+				"wikioasismagic-experiments-discard",
+				"wikioasismagic-experiments-edit-active-help",
+				"wikioasismagic-experiments-edit-active-off",
+				"wikioasismagic-experiments-edit-active-on",
+				"wikioasismagic-experiments-edit-population",
+				"wikioasismagic-experiments-edit-rollout",
+				"wikioasismagic-experiments-edit-rollout-help",
+				"wikioasismagic-experiments-edit-rollout-label",
+				"wikioasismagic-experiments-edit-schedule",
+				"wikioasismagic-experiments-edit-status",
+				"wikioasismagic-experiments-edit-variants",
+				"wikioasismagic-experiments-edit-wikis",
+				"wikioasismagic-experiments-empty",
+				"wikioasismagic-experiments-enrolled-none",
+				"wikioasismagic-experiments-enrolled-note",
+				"wikioasismagic-experiments-enrolled-wikis",
+				"wikioasismagic-experiments-error-dates",
+				"wikioasismagic-experiments-error-rollout",
+				"wikioasismagic-experiments-error-weights",
+				"wikioasismagic-experiments-even",
+				"wikioasismagic-experiments-extension-managewiki",
+				"wikioasismagic-experiments-extension-wikis",
+				"wikioasismagic-experiments-field-active",
+				"wikioasismagic-experiments-field-default",
+				"wikioasismagic-experiments-field-end",
+				"wikioasismagic-experiments-field-end-help",
+				"wikioasismagic-experiments-field-excludewikis",
+				"wikioasismagic-experiments-field-excludewikis-help",
+				"wikioasismagic-experiments-field-population",
+				"wikioasismagic-experiments-field-rollout",
+				"wikioasismagic-experiments-field-salt",
+				"wikioasismagic-experiments-field-start",
+				"wikioasismagic-experiments-field-start-help",
+				"wikioasismagic-experiments-field-weights",
+				"wikioasismagic-experiments-field-wikis",
+				"wikioasismagic-experiments-field-wikis-help-browser",
+				"wikioasismagic-experiments-field-wikis-help-user",
+				"wikioasismagic-experiments-field-wikis-help-wiki",
+				"wikioasismagic-experiments-filter-all",
+				"wikioasismagic-experiments-filter-live",
+				"wikioasismagic-experiments-filter-stopped",
+				"wikioasismagic-experiments-history-central",
+				"wikioasismagic-experiments-history-empty",
+				"wikioasismagic-experiments-history-failed",
+				"wikioasismagic-experiments-history-log",
+				"wikioasismagic-experiments-history-reset",
+				"wikioasismagic-experiments-history-update",
+				"wikioasismagic-experiments-interval",
+				"wikioasismagic-experiments-lastchange",
+				"wikioasismagic-experiments-loading",
+				"wikioasismagic-experiments-manage-on-central",
+				"wikioasismagic-experiments-metric-api",
+				"wikioasismagic-experiments-metric-edit",
+				"wikioasismagic-experiments-metric-edit-ns",
+				"wikioasismagic-experiments-metric-event",
+				"wikioasismagic-experiments-metric-log",
+				"wikioasismagic-experiments-metric-primary",
+				"wikioasismagic-experiments-metric-specialpage",
+				"wikioasismagic-experiments-metric-tag",
+				"wikioasismagic-experiments-metrics-none",
+				"wikioasismagic-experiments-mine-enrolled",
+				"wikioasismagic-experiments-mine-forced",
+				"wikioasismagic-experiments-mine-outside",
+				"wikioasismagic-experiments-nomatch",
+				"wikioasismagic-experiments-overrides",
+				"wikioasismagic-experiments-overrides-reset",
+				"wikioasismagic-experiments-owner",
+				"wikioasismagic-experiments-percent",
+				"wikioasismagic-experiments-period-0",
+				"wikioasismagic-experiments-period-30",
+				"wikioasismagic-experiments-period-7",
+				"wikioasismagic-experiments-period-90",
+				"wikioasismagic-experiments-points",
+				"wikioasismagic-experiments-population-user-all",
+				"wikioasismagic-experiments-population-user-existing",
+				"wikioasismagic-experiments-population-user-new",
+				"wikioasismagic-experiments-population-wiki-all",
+				"wikioasismagic-experiments-population-wiki-existing",
+				"wikioasismagic-experiments-population-wiki-new",
+				"wikioasismagic-experiments-preview",
+				"wikioasismagic-experiments-preview-help",
+				"wikioasismagic-experiments-problems",
+				"wikioasismagic-experiments-problems-count",
+				"wikioasismagic-experiments-pvalue",
+				"wikioasismagic-experiments-readonly-central",
+				"wikioasismagic-experiments-readonly-unavailable",
+				"wikioasismagic-experiments-reason",
+				"wikioasismagic-experiments-reset",
+				"wikioasismagic-experiments-reset-confirm",
+				"wikioasismagic-experiments-reset-title",
+				"wikioasismagic-experiments-results-empty-browser",
+				"wikioasismagic-experiments-results-empty-user",
+				"wikioasismagic-experiments-results-empty-wiki",
+				"wikioasismagic-experiments-results-enrolled",
+				"wikioasismagic-experiments-results-exposed-browser",
+				"wikioasismagic-experiments-results-exposed-user",
+				"wikioasismagic-experiments-results-exposed-wiki",
+				"wikioasismagic-experiments-results-failed",
+				"wikioasismagic-experiments-results-help",
+				"wikioasismagic-experiments-results-ineligible",
+				"wikioasismagic-experiments-results-metric",
+				"wikioasismagic-experiments-results-outside",
+				"wikioasismagic-experiments-results-period",
+				"wikioasismagic-experiments-results-reference",
+				"wikioasismagic-experiments-results-share",
+				"wikioasismagic-experiments-results-srm",
+				"wikioasismagic-experiments-results-summary",
+				"wikioasismagic-experiments-results-summary-help",
+				"wikioasismagic-experiments-results-top",
+				"wikioasismagic-experiments-review",
+				"wikioasismagic-experiments-salt-help",
+				"wikioasismagic-experiments-save",
+				"wikioasismagic-experiments-save-failed",
+				"wikioasismagic-experiments-save-title",
+				"wikioasismagic-experiments-saved",
+				"wikioasismagic-experiments-saved-nochange",
+				"wikioasismagic-experiments-saved-wikis",
+				"wikioasismagic-experiments-schedule-noend",
+				"wikioasismagic-experiments-schedule-now",
+				"wikioasismagic-experiments-schedule-off",
+				"wikioasismagic-experiments-schedule-until",
+				"wikioasismagic-experiments-search",
+				"wikioasismagic-experiments-section-metrics",
+				"wikioasismagic-experiments-section-mine-browser",
+				"wikioasismagic-experiments-section-mine-user",
+				"wikioasismagic-experiments-section-mine-wiki",
+				"wikioasismagic-experiments-section-split",
+				"wikioasismagic-experiments-section-targeting",
+				"wikioasismagic-experiments-section-variants",
+				"wikioasismagic-experiments-ship",
+				"wikioasismagic-experiments-ship-help",
+				"wikioasismagic-experiments-split-everyone",
+				"wikioasismagic-experiments-split-outside",
+				"wikioasismagic-experiments-state-unavailable",
+				"wikioasismagic-experiments-status-ended",
+				"wikioasismagic-experiments-status-off",
+				"wikioasismagic-experiments-status-running",
+				"wikioasismagic-experiments-status-scheduled",
+				"wikioasismagic-experiments-tab-history",
+				"wikioasismagic-experiments-tab-overview",
+				"wikioasismagic-experiments-tab-results",
+				"wikioasismagic-experiments-tab-rollout",
+				"wikioasismagic-experiments-task",
+				"wikioasismagic-experiments-tile-audience",
+				"wikioasismagic-experiments-tile-default",
+				"wikioasismagic-experiments-tile-default-note",
+				"wikioasismagic-experiments-tile-enrolled",
+				"wikioasismagic-experiments-tile-schedule",
+				"wikioasismagic-experiments-unsaved",
+				"wikioasismagic-experiments-utc",
+				"wikioasismagic-experiments-value-off",
+				"wikioasismagic-experiments-value-on",
+				"wikioasismagic-experiments-warning-population",
+				"wikioasismagic-experiments-warning-rampdown",
+				"wikioasismagic-experiments-warning-reset",
+				"wikioasismagic-experiments-warning-start",
+				"wikioasismagic-experiments-warning-stop",
+				"wikioasismagic-experiments-warning-weights",
+				"wikioasismagic-experiments-warning-wikis",
+				"wikioasismagic-experiments-weight-label",
+				"wikioasismagic-experiments-wikis-all",
+				"wikioasismagic-experiments-window",
+				"wikioasismagic-experiments-window-none"
+			]
 		}
 	},
 	"JobClasses": {
 		"cloudflarePagePurge": {
 			"class": "WikiOasis\\WikiOasisMagic\\Jobs\\CloudflarePurgeJob",
 			"needsPage": false
+		},
+		"wikiOasisExperimentSync": {
+			"class": "WikiOasis\\WikiOasisMagic\\Jobs\\ExperimentSyncJob",
+			"needsPage": false
+		},
+		"wikiOasisExperimentLog": {
+			"class": "WikiOasis\\WikiOasisMagic\\Jobs\\ExperimentLogJob",
+			"needsPage": false
 		}
 	},
+	"ExtensionFunctions": [
+		"WikiOasis\\WikiOasisMagic\\HookHandlers\\Experiments::onExtensionFunction"
+	],
 	"ServiceWiringFiles": [
 		"ServiceWiring.php"
 	],

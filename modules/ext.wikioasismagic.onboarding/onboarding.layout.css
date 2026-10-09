@@ -1,0 +1,80 @@
+
+.wo-onboarding {
+	container-type: inline-size;
+}
+
+.wo-shell {
+	display: grid;
+	grid-template-columns: minmax( 0, 1fr );
+	gap: 24px;
+	margin: 8px 0 32px;
+}
+
+.wo-main {
+	min-width: 0;
+	max-width: 680px;
+}
+
+.wo-rail {
+	display: none;
+}
+
+.wo-shell .wo-preview {
+	max-width: 420px;
+}
+
+@container ( min-width: 760px ) {
+	.wo-shell {
+		grid-template-columns: 180px minmax( 0, 1fr );
+		gap: 32px;
+	}
+
+	.wo-rail {
+		display: block;
+		position: sticky;
+		top: 24px;
+		align-self: start;
+	}
+
+	.wo-mobile-progress {
+		display: none;
+	}
+
+	.wo-shell .wo-preview {
+		grid-column: 2;
+	}
+}
+
+@container ( min-width: 1080px ) {
+	.wo-shell.has-preview {
+		grid-template-columns: 180px minmax( 0, 1fr ) 300px;
+	}
+
+	.wo-shell.has-preview .wo-preview {
+		grid-column: 3;
+		max-width: none;
+		position: sticky;
+		top: 24px;
+		align-self: start;
+	}
+}
+
+@container ( max-width: 560px ) {
+	.wo-choices,
+	.wo-two {
+		grid-template-columns: minmax( 0, 1fr );
+	}
+
+	.wo-review dl {
+		grid-template-columns: minmax( 0, 1fr );
+		gap: 0;
+	}
+
+	.wo-review dd {
+		margin-bottom: 8px;
+	}
+
+	.wo-onboarding h2.wo-h1 {
+		font-size: 1.5rem;
+	}
+}
