@@ -20,6 +20,7 @@ use WikiOasis\WikiOasisMagic\Experiments\WikiRollout;
 use WikiOasis\WikiOasisMagic\FandomImport\FandomClient;
 use WikiOasis\WikiOasisMagic\FandomImport\FandomImportManager;
 use WikiOasis\WikiOasisMagic\FandomImport\FandomImportNotifier;
+use WikiOasis\WikiOasisMagic\FandomImport\FandomImportPresenter;
 use WikiOasis\WikiOasisMagic\FandomImport\FandomImportSpool;
 use WikiOasis\WikiOasisMagic\FandomImport\FandomImportStore;
 use WikiOasis\WikiOasisMagic\Onboarding\OnboardingEnvironment;
@@ -141,6 +142,16 @@ return [
 			ExtensionRegistry::getInstance(),
 			$services->getUserFactory(),
 			LoggerFactory::getInstance( 'WikiOasisMagic' )
+		);
+	},
+
+	'WikiOasisMagic.FandomImportPresenter' => static function ( MediaWikiServices $services ): FandomImportPresenter {
+		return new FandomImportPresenter(
+			$services->get( 'WikiOasisMagic.FandomImportManager' ),
+			$services->get( 'WikiOasisMagic.FandomImportStore' ),
+			$services->get( 'WikiOasisMagic.FandomClient' ),
+			$services->getUserFactory(),
+			$services->getLanguageNameUtils()
 		);
 	},
 

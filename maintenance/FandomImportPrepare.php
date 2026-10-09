@@ -41,13 +41,13 @@ use function trim;
 class FandomImportPrepare extends Maintenance {
 
 	/**
-	 * Fandom's own namespaces: forums, blogs, message walls, discussions,
-	 * maps and the like. Nothing here can show them, so they are not recreated.
+	 * Fandom's own namespaces: forums, user profiles, blogs, message walls,
+	 * discussions, maps and the like. Nothing here can show them, so they are not recreated.
 	 * (Module, 828 and 829, exists everywhere already.)
 	 */
 	private const FANDOM_NAMESPACES = [
-		110, 111, 400, 401, 420, 421, 500, 501, 502, 503, 700, 701,
-		828, 829, 1200, 1201, 1202, 2000, 2001, 2002, 2900, 2901,
+		110, 111, 202, 203, 400, 401, 420, 421, 500, 501, 502, 503, 700, 701,
+		828, 829, 1200, 1201, 1202, 1203, 2000, 2001, 2002, 2900, 2901,
 	];
 
 	private array $warnings = [];

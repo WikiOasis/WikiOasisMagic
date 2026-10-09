@@ -135,6 +135,11 @@ class FandomImportManager {
 			$this->createWikiConfig->get( CreateWikiConfigNames::DatabaseSuffix );
 	}
 
+	/** The domain new wikis live under, such as "wikioasis.org". */
+	public function getDomain(): string {
+		return (string)$this->createWikiConfig->get( CreateWikiConfigNames::Subdomain );
+	}
+
 	public function getWikiUrl( FandomImportRequest $request ): string {
 		return $this->validator->getValidUrl( $request->dbname );
 	}

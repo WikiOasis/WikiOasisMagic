@@ -280,6 +280,7 @@
 				"WikiOasisMagic.FandomImportManager",
 				"WikiOasisMagic.FandomImportStore",
 				"WikiOasisMagic.FandomClient",
+				"WikiOasisMagic.FandomImportPresenter",
 				"UserFactory"
 			]
 		}
@@ -323,6 +324,23 @@
 			"class": "WikiOasis\\WikiOasisMagic\\Api\\ApiEditPrompt",
 			"services": [
 				"WikiOasisMagic.EditPromptGate"
+			]
+		},
+		"wikioasisfandomimport": {
+			"class": "WikiOasis\\WikiOasisMagic\\Api\\ApiFandomImport",
+			"services": [
+				"WikiOasisMagic.FandomImportManager",
+				"WikiOasisMagic.FandomImportStore",
+				"WikiOasisMagic.FandomImportPresenter"
+			]
+		},
+		"wikioasisfandomimportaction": {
+			"class": "WikiOasis\\WikiOasisMagic\\Api\\ApiFandomImportAction",
+			"services": [
+				"WikiOasisMagic.FandomImportManager",
+				"WikiOasisMagic.FandomImportStore",
+				"WikiOasisMagic.FandomImportPresenter",
+				"WikiOasisMagic.FandomClient"
 			]
 		}
 	},
@@ -435,6 +453,20 @@
 			"newbie": [
 				2,
 				86400
+			]
+		},
+		"wikioasisfandomimport-lookup": {
+			"anon": [
+				20,
+				60
+			],
+			"user": [
+				60,
+				60
+			],
+			"newbie": [
+				30,
+				60
 			]
 		}
 	},
@@ -1063,7 +1095,7 @@
 			"value": "/srv/fandom-import"
 		},
 		"WikiOasisMagicFandomImportLargeFileCount": {
-			"description": "Int. Imports of Fandom wikis with at least this many files must be confirmed by the reviewer: fetching them takes days and disk space on the worker.",
+			"description": "Int. Imports of Fandom wikis with at least this many files must be confirmed by the reviewer: copying them takes days.",
 			"value": 20000
 		},
 		"WikiOasisMagicFandomImportUploadUser": {
@@ -1641,6 +1673,215 @@
 		"ext.wikioasismagic.fandomimport.styles": {
 			"styles": [
 				"ext.wikioasismagic.fandomimport.styles/fandomimport.less"
+			]
+		},
+		"ext.wikioasismagic.fandomimport": {
+			"class": "MediaWiki\\ResourceLoader\\CodexModule",
+			"localBasePath": "modules/ext.wikioasismagic.fandomimport",
+			"remoteExtPath": "WikiOasisMagic/modules/ext.wikioasismagic.fandomimport",
+			"packageFiles": [
+				"init.js",
+				"api.js",
+				"format.js",
+				"components/App.vue",
+				"components/IndexView.vue",
+				"components/ImportTable.vue",
+				"components/RequestView.vue",
+				"components/WikiPreview.vue",
+				"components/StatusView.vue",
+				"components/StageList.vue",
+				"components/ProgressPanel.vue",
+				"components/ProgressMeter.vue",
+				"components/ReviewPanel.vue",
+				"components/StatusChip.vue",
+				{
+					"name": "components/icons.json",
+					"callback": "MediaWiki\\ResourceLoader\\CodexModule::getIcons",
+					"callbackParam": [
+						"cdxIconAlert",
+						"cdxIconCheck",
+						"cdxIconClock",
+						"cdxIconClose",
+						"cdxIconDownload",
+						"cdxIconReload",
+						"cdxIconSearch",
+						"cdxIconTrash",
+						"cdxIconUserAvatar"
+					]
+				}
+			],
+			"styles": [
+				"fandomimport.app.less"
+			],
+			"dependencies": [
+				"vue",
+				"mediawiki.api",
+				"mediawiki.language",
+				"mediawiki.util",
+				"mediawiki.jqueryMsg"
+			],
+			"codexComponents": [
+				"CdxAccordion",
+				"CdxButton",
+				"CdxCheckbox",
+				"CdxDialog",
+				"CdxField",
+				"CdxIcon",
+				"CdxInfoChip",
+				"CdxLookup",
+				"CdxMessage",
+				"CdxProgressIndicator",
+				"CdxRadio",
+				"CdxSelect",
+				"CdxTab",
+				"CdxTable",
+				"CdxTabs",
+				"CdxTextArea",
+				"CdxTextInput"
+			],
+			"messages": [
+				"wikioasismagic-fandomimport-account-admin",
+				"wikioasismagic-fandomimport-account-checking",
+				"wikioasismagic-fandomimport-account-missing",
+				"wikioasismagic-fandomimport-account-none",
+				"wikioasismagic-fandomimport-account-notadmin",
+				"wikioasismagic-fandomimport-account-unknown",
+				"wikioasismagic-fandomimport-action-approve",
+				"wikioasismagic-fandomimport-action-decline",
+				"wikioasismagic-fandomimport-action-discard",
+				"wikioasismagic-fandomimport-action-retry",
+				"wikioasismagic-fandomimport-cancel",
+				"wikioasismagic-fandomimport-column-requester",
+				"wikioasismagic-fandomimport-column-source",
+				"wikioasismagic-fandomimport-column-status",
+				"wikioasismagic-fandomimport-column-updated",
+				"wikioasismagic-fandomimport-column-wiki",
+				"wikioasismagic-fandomimport-declined-reason",
+				"wikioasismagic-fandomimport-desc-approved",
+				"wikioasismagic-fandomimport-desc-creating",
+				"wikioasismagic-fandomimport-desc-declined",
+				"wikioasismagic-fandomimport-desc-done",
+				"wikioasismagic-fandomimport-desc-failed",
+				"wikioasismagic-fandomimport-desc-pending",
+				"wikioasismagic-fandomimport-desc-queued",
+				"wikioasismagic-fandomimport-desc-running",
+				"wikioasismagic-fandomimport-desc-waiting-dump",
+				"wikioasismagic-fandomimport-details-heading",
+				"wikioasismagic-fandomimport-dialog-decline-help",
+				"wikioasismagic-fandomimport-dialog-decline-title",
+				"wikioasismagic-fandomimport-dialog-discard-body",
+				"wikioasismagic-fandomimport-dialog-discard-title",
+				"wikioasismagic-fandomimport-done-approve",
+				"wikioasismagic-fandomimport-done-banner",
+				"wikioasismagic-fandomimport-done-decline",
+				"wikioasismagic-fandomimport-done-discard",
+				"wikioasismagic-fandomimport-done-retry",
+				"wikioasismagic-fandomimport-dump-current",
+				"wikioasismagic-fandomimport-dump-full",
+				"wikioasismagic-fandomimport-dump-missing-chip",
+				"wikioasismagic-fandomimport-dump-none",
+				"wikioasismagic-fandomimport-error-generic",
+				"wikioasismagic-fandomimport-failed-at",
+				"wikioasismagic-fandomimport-field-agreement",
+				"wikioasismagic-fandomimport-field-category",
+				"wikioasismagic-fandomimport-field-fandomuser-help",
+				"wikioasismagic-fandomimport-field-fandomuser-short",
+				"wikioasismagic-fandomimport-field-language",
+				"wikioasismagic-fandomimport-field-mode",
+				"wikioasismagic-fandomimport-field-reason",
+				"wikioasismagic-fandomimport-field-reason-help",
+				"wikioasismagic-fandomimport-field-sitename",
+				"wikioasismagic-fandomimport-field-subdomain",
+				"wikioasismagic-fandomimport-files-kept-short",
+				"wikioasismagic-fandomimport-form-intro",
+				"wikioasismagic-fandomimport-form-large",
+				"wikioasismagic-fandomimport-group-community",
+				"wikioasismagic-fandomimport-group-wiki",
+				"wikioasismagic-fandomimport-info-address",
+				"wikioasismagic-fandomimport-info-fandomuser",
+				"wikioasismagic-fandomimport-info-files",
+				"wikioasismagic-fandomimport-info-language",
+				"wikioasismagic-fandomimport-info-license",
+				"wikioasismagic-fandomimport-info-mode",
+				"wikioasismagic-fandomimport-info-newwiki",
+				"wikioasismagic-fandomimport-info-newwiki-pending",
+				"wikioasismagic-fandomimport-info-requested",
+				"wikioasismagic-fandomimport-info-requester",
+				"wikioasismagic-fandomimport-info-reviewer",
+				"wikioasismagic-fandomimport-info-sitename",
+				"wikioasismagic-fandomimport-info-updated",
+				"wikioasismagic-fandomimport-list-declined",
+				"wikioasismagic-fandomimport-list-done",
+				"wikioasismagic-fandomimport-list-empty",
+				"wikioasismagic-fandomimport-list-failed",
+				"wikioasismagic-fandomimport-list-inprogress",
+				"wikioasismagic-fandomimport-list-mine",
+				"wikioasismagic-fandomimport-list-pending",
+				"wikioasismagic-fandomimport-live",
+				"wikioasismagic-fandomimport-lookup-help-app",
+				"wikioasismagic-fandomimport-lookup-label",
+				"wikioasismagic-fandomimport-lookup-missing",
+				"wikioasismagic-fandomimport-lookup-placeholder",
+				"wikioasismagic-fandomimport-lookup-submit",
+				"wikioasismagic-fandomimport-lookup-unreachable",
+				"wikioasismagic-fandomimport-mode-fork",
+				"wikioasismagic-fandomimport-mode-fork-desc",
+				"wikioasismagic-fandomimport-mode-move",
+				"wikioasismagic-fandomimport-mode-move-desc",
+				"wikioasismagic-fandomimport-progress-batches",
+				"wikioasismagic-fandomimport-progress-batches-value",
+				"wikioasismagic-fandomimport-progress-dump",
+				"wikioasismagic-fandomimport-progress-extensions",
+				"wikioasismagic-fandomimport-progress-failed-files",
+				"wikioasismagic-fandomimport-progress-heading",
+				"wikioasismagic-fandomimport-progress-images-added",
+				"wikioasismagic-fandomimport-progress-images-bytes",
+				"wikioasismagic-fandomimport-progress-images-failed",
+				"wikioasismagic-fandomimport-progress-images-fetched",
+				"wikioasismagic-fandomimport-progress-images-total",
+				"wikioasismagic-fandomimport-progress-namespaces",
+				"wikioasismagic-fandomimport-progress-pages",
+				"wikioasismagic-fandomimport-progress-skipped-ns",
+				"wikioasismagic-fandomimport-progress-skipped-summary",
+				"wikioasismagic-fandomimport-queue-tab",
+				"wikioasismagic-fandomimport-reason-heading",
+				"wikioasismagic-fandomimport-request-again",
+				"wikioasismagic-fandomimport-review-acknowledge",
+				"wikioasismagic-fandomimport-review-acknowledge-unknown",
+				"wikioasismagic-fandomimport-review-comment",
+				"wikioasismagic-fandomimport-review-decline-reason",
+				"wikioasismagic-fandomimport-review-heading",
+				"wikioasismagic-fandomimport-review-queue",
+				"wikioasismagic-fandomimport-stage-create",
+				"wikioasismagic-fandomimport-stage-dump",
+				"wikioasismagic-fandomimport-stage-finalize",
+				"wikioasismagic-fandomimport-stage-handoff",
+				"wikioasismagic-fandomimport-stage-images",
+				"wikioasismagic-fandomimport-stage-pages",
+				"wikioasismagic-fandomimport-stage-prepare",
+				"wikioasismagic-fandomimport-stage-resolve",
+				"wikioasismagic-fandomimport-stage-upload",
+				"wikioasismagic-fandomimport-stages-heading",
+				"wikioasismagic-fandomimport-stat-articles",
+				"wikioasismagic-fandomimport-stat-pages",
+				"wikioasismagic-fandomimport-status-approved",
+				"wikioasismagic-fandomimport-status-creating",
+				"wikioasismagic-fandomimport-status-declined",
+				"wikioasismagic-fandomimport-status-done",
+				"wikioasismagic-fandomimport-status-failed",
+				"wikioasismagic-fandomimport-status-pending",
+				"wikioasismagic-fandomimport-status-queued",
+				"wikioasismagic-fandomimport-status-running",
+				"wikioasismagic-fandomimport-status-waiting-dump",
+				"wikioasismagic-fandomimport-step-current",
+				"wikioasismagic-fandomimport-step-done",
+				"wikioasismagic-fandomimport-step-failed",
+				"wikioasismagic-fandomimport-step-todo",
+				"wikioasismagic-fandomimport-step-waiting",
+				"wikioasismagic-fandomimport-subdomain-preview",
+				"wikioasismagic-fandomimport-submit",
+				"wikioasismagic-fandomimport-unknown",
+				"wikioasismagic-fandomimport-waiting-dump-help"
 			]
 		}
 	},

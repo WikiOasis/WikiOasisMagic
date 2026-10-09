@@ -11,13 +11,13 @@ use MediaWiki\User\UserFactory;
 use StatusValue;
 use WikiOasis\WikiOasisMagic\FandomImport\FandomClient;
 use WikiOasis\WikiOasisMagic\FandomImport\FandomImportManager;
+use WikiOasis\WikiOasisMagic\FandomImport\FandomImportPresenter;
 use WikiOasis\WikiOasisMagic\FandomImport\FandomImportRequest;
 use WikiOasis\WikiOasisMagic\FandomImport\FandomImportStatus;
 use WikiOasis\WikiOasisMagic\FandomImport\FandomImportStore;
 use WikiOasis\WikiOasisMagic\FandomImport\FandomSource;
 use WikiOasis\WikiOasisMagic\FandomImport\FandomWikiInfo;
 use function array_intersect;
-use function array_search;
 use function count;
 use function htmlspecialchars;
 use function implode;
@@ -43,6 +43,7 @@ class SpecialFandomImport extends SpecialPage {
 		private readonly FandomImportManager $manager,
 		private readonly FandomImportStore $store,
 		private readonly FandomClient $client,
+		private readonly FandomImportPresenter $presenter,
 		private readonly UserFactory $userFactory,
 	) {
 		parent::__construct( 'FandomImport' );
@@ -70,33 +71,52 @@ class SpecialFandomImport extends SpecialPage {
 			return;
 		}
 
+		$out->addHTML( Html::openElement( 'div', [ 'id' => 'wo-fi-app', 'class' => 'wo-fi-root' ] ) );
+		$config = $this->render( trim( (string)$subPage ) );
+		$out->addHTML( Html::closeElement( 'div' ) );
+
+		if ( $config !== null && $out->getRedirect() === '' ) {
+			$out->addJsConfigVars( 'wgWikiOasisFandomImport', $config );
+			$out->addModules( 'ext.wikioasismagic.fandomimport' );
+		}
+	}
+
+	/**
+	 * Render the page without JavaScript, and return what the Vue app needs
+	 * to replace it, or null when redirecting.
+	 */
+	private function render( string $subPage ): ?array {
+		$out = $this->getOutput();
+		$error = null;
+
 		$lookup = trim( $this->getRequest()->getText( 'fandom' ) );
 		if ( $lookup !== '' ) {
 			$source = FandomSource::newFromInput( $lookup );
 			if ( $source ) {
 				$out->redirect( $this->getPageTitle( $source->getSubpage() )->getLocalURL() );
-				return;
+				return null;
 			}
 
-			$out->addHTML( Html::errorBox( $this->msg( 'wikioasismagic-fandomimport-error-badinput' )->parse() ) );
+			$error = $this->msg( 'wikioasismagic-fandomimport-error-badinput' )->parse();
+			$out->addHTML( Html::errorBox( $error ) );
 		}
 
-		$subPage = trim( (string)$subPage );
 		if ( $subPage === '' ) {
 			$this->showIndex();
-			return;
+			return $this->indexConfig( $error );
 		}
 
 		$source = FandomSource::newFromSubpage( $subPage ) ?? FandomSource::newFromInput( $subPage );
 		if ( !$source ) {
-			$out->addHTML( Html::errorBox( $this->msg( 'wikioasismagic-fandomimport-error-badinput' )->parse() ) );
+			$error = $this->msg( 'wikioasismagic-fandomimport-error-badinput' )->parse();
+			$out->addHTML( Html::errorBox( $error ) );
 			$this->showIndex();
-			return;
+			return $this->indexConfig( $error );
 		}
 
 		if ( $source->getSubpage() !== $subPage ) {
 			$out->redirect( $this->getPageTitle( $source->getSubpage() )->getLocalURL() );
-			return;
+			return null;
 		}
 
 		$out->setPageTitleMsg( $this->msg( 'wikioasismagic-fandomimport-title', $source->getHost() ) );
@@ -106,10 +126,31 @@ class SpecialFandomImport extends SpecialPage {
 		$wantsNew = $this->getRequest()->getBool( 'new' );
 		if ( $request && !( $request->status === FandomImportStatus::DECLINED && $wantsNew ) ) {
 			$this->showRequest( $request );
-			return;
+			return [
+				'view' => 'status',
+				'detail' => $this->presenter->detail( $request, $this->getContext() ),
+			];
 		}
 
 		$this->showForm( $source, $wantsNew );
+		return [
+			'view' => 'request',
+			'preview' => $this->presenter->preview( $source, $this->getContext() ),
+			'form' => $this->presenter->form( $this->getContext() ),
+			'indexUrl' => $this->getPageTitle()->getLocalURL(),
+		];
+	}
+
+	private function indexConfig( ?string $error ): array {
+		$blocker = $this->manager->getBlocker( $this->getUser() );
+		return [
+			'view' => 'index',
+			'intro' => $this->msg( 'wikioasismagic-fandomimport-intro' )->parseAsBlock(),
+			'error' => $error,
+			'canRequest' => $blocker === null,
+			'blocker' => $blocker ? $this->msg( $blocker )->parse() : null,
+			'pageUrl' => $this->getPageTitle()->getLocalURL(),
+		] + $this->presenter->index( $this->getContext() );
 	}
 
 	private function showIndex(): void {
@@ -545,19 +586,10 @@ class SpecialFandomImport extends SpecialPage {
 	}
 
 	private function stages( FandomImportRequest $request ): string {
-		$current = array_search( $request->stage, FandomImportStatus::STAGES, true );
 		$items = '';
-		foreach ( FandomImportStatus::STAGES as $index => $stage ) {
-			if ( $request->status === FandomImportStatus::DONE || ( $current !== false && $index < $current ) ) {
-				$state = 'done';
-			} elseif ( $index === $current ) {
-				$state = $request->status === FandomImportStatus::FAILED ? 'failed' : 'current';
-			} else {
-				$state = 'todo';
-			}
-
-			$items .= Html::element( 'li', [ 'class' => "wo-fi-stage wo-fi-stage--$state" ],
-				$this->msg( "wikioasismagic-fandomimport-stage-$stage" )->text() );
+		foreach ( $this->presenter->stages( $request ) as $stage ) {
+			$items .= Html::element( 'li', [ 'class' => "wo-fi-stage wo-fi-stage--{$stage['state']}" ],
+				$this->msg( "wikioasismagic-fandomimport-stage-{$stage['id']}" )->text() );
 		}
 
 		return Html::element( 'h2', [], $this->msg( 'wikioasismagic-fandomimport-stages-heading' )->text() ) .
@@ -598,6 +630,13 @@ class SpecialFandomImport extends SpecialPage {
 		if ( is_numeric( $request->getProgress( 'images_bytes_total' ) ) ) {
 			$rows['wikioasismagic-fandomimport-progress-images-bytes'] =
 				htmlspecialchars( $lang->formatSize( (int)$request->getProgress( 'images_bytes_total' ) ) );
+		}
+
+		$batches = $request->getProgress( 'batches_total' );
+		if ( is_numeric( $batches ) && $batches > 0 ) {
+			$rows['wikioasismagic-fandomimport-progress-batches'] = $this->msg(
+				'wikioasismagic-fandomimport-progress-batches-value'
+			)->numParams( (int)$request->getProgress( 'batches_done', 0 ), (int)$batches )->escaped();
 		}
 
 		foreach ( [
