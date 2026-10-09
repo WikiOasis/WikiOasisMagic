@@ -95,7 +95,7 @@ class ApiExperimentSave extends ApiBase {
 			],
 			'baseversion' => [
 				ParamValidator::PARAM_TYPE => 'string',
-				ParamValidator::PARAM_REQUIRED => true,
+				ParamValidator::PARAM_DEFAULT => '',
 			],
 		];
 	}
