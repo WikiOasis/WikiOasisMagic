@@ -17,6 +17,11 @@ use WikiOasis\WikiOasisMagic\Experiments\ExperimentTracker;
 use WikiOasis\WikiOasisMagic\Experiments\UnitFactory;
 use WikiOasis\WikiOasisMagic\Experiments\WikiFarm;
 use WikiOasis\WikiOasisMagic\Experiments\WikiRollout;
+use WikiOasis\WikiOasisMagic\FandomImport\FandomClient;
+use WikiOasis\WikiOasisMagic\FandomImport\FandomImportManager;
+use WikiOasis\WikiOasisMagic\FandomImport\FandomImportNotifier;
+use WikiOasis\WikiOasisMagic\FandomImport\FandomImportSpool;
+use WikiOasis\WikiOasisMagic\FandomImport\FandomImportStore;
 use WikiOasis\WikiOasisMagic\Onboarding\OnboardingEnvironment;
 use WikiOasis\WikiOasisMagic\Onboarding\OnboardingIcons;
 use WikiOasis\WikiOasisMagic\Onboarding\OnboardingMetrics;
@@ -98,6 +103,59 @@ return [
 			$services->get( 'WikiOasisMagic.WikiFarm' ),
 			$services->getUserFactory(),
 			$services->getStatsFactory(),
+			LoggerFactory::getInstance( 'WikiOasisMagic' )
+		);
+	},
+
+	'WikiOasisMagic.FandomClient' => static function ( MediaWikiServices $services ): FandomClient {
+		return new FandomClient(
+			$services->getHttpRequestFactory(),
+			$services->getMainWANObjectCache(),
+			LoggerFactory::getInstance( 'WikiOasisMagic' )
+		);
+	},
+
+	'WikiOasisMagic.FandomImportManager' => static function ( MediaWikiServices $services ): FandomImportManager {
+		return new FandomImportManager(
+			new ServiceOptions(
+				FandomImportManager::CONSTRUCTOR_OPTIONS,
+				$services->getConfigFactory()->makeConfig( 'WikiOasisMagic' )
+			),
+			$services->get( 'CreateWikiConfig' ),
+			$services->get( 'WikiOasisMagic.FandomImportStore' ),
+			$services->get( 'WikiOasisMagic.FandomImportSpool' ),
+			$services->get( 'WikiOasisMagic.FandomImportNotifier' ),
+			$services->get( 'WikiOasisMagic.WikiFarm' ),
+			$services->get( 'WikiOasisMagic.OnboardingWikiRequestSubmitter' ),
+			$services->get( 'CreateWikiValidator' ),
+			$services->get( 'WikiManagerFactory' ),
+			$services->getJobQueueGroupFactory(),
+			$services->getLanguageNameUtils(),
+			$services->getUserFactory(),
+			LoggerFactory::getInstance( 'WikiOasisMagic' )
+		);
+	},
+
+	'WikiOasisMagic.FandomImportNotifier' => static function ( MediaWikiServices $services ): FandomImportNotifier {
+		return new FandomImportNotifier(
+			ExtensionRegistry::getInstance(),
+			$services->getUserFactory(),
+			LoggerFactory::getInstance( 'WikiOasisMagic' )
+		);
+	},
+
+	'WikiOasisMagic.FandomImportSpool' => static function ( MediaWikiServices $services ): FandomImportSpool {
+		return new FandomImportSpool(
+			new ServiceOptions(
+				FandomImportSpool::CONSTRUCTOR_OPTIONS,
+				$services->getConfigFactory()->makeConfig( 'WikiOasisMagic' )
+			)
+		);
+	},
+
+	'WikiOasisMagic.FandomImportStore' => static function ( MediaWikiServices $services ): FandomImportStore {
+		return new FandomImportStore(
+			$services->getConnectionProvider(),
 			LoggerFactory::getInstance( 'WikiOasisMagic' )
 		);
 	},

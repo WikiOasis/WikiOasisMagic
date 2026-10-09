@@ -343,5 +343,201 @@
 		"pk": [
 			"wosy_experiment"
 		]
+	},
+	{
+		"name": "wo_fandom_import",
+		"comment": "Imports of Fandom wikis requested on Special:FandomImport, on the central wiki",
+		"columns": [
+			{
+				"name": "wofi_id",
+				"type": "integer",
+				"options": {
+					"unsigned": true,
+					"notnull": true,
+					"autoincrement": true
+				}
+			},
+			{
+				"name": "wofi_source",
+				"type": "binary",
+				"options": {
+					"notnull": true,
+					"length": 128
+				}
+			},
+			{
+				"name": "wofi_dbname",
+				"type": "binary",
+				"options": {
+					"notnull": true,
+					"length": 64
+				}
+			},
+			{
+				"name": "wofi_sitename",
+				"type": "binary",
+				"options": {
+					"notnull": true,
+					"length": 255
+				}
+			},
+			{
+				"name": "wofi_language",
+				"type": "binary",
+				"options": {
+					"notnull": true,
+					"length": 35
+				}
+			},
+			{
+				"name": "wofi_category",
+				"type": "binary",
+				"options": {
+					"notnull": true,
+					"length": 64,
+					"default": ""
+				}
+			},
+			{
+				"name": "wofi_mode",
+				"type": "binary",
+				"options": {
+					"notnull": true,
+					"length": 8
+				}
+			},
+			{
+				"name": "wofi_reason",
+				"type": "blob",
+				"options": {
+					"notnull": true,
+					"length": 65530
+				}
+			},
+			{
+				"name": "wofi_fandom_user",
+				"type": "binary",
+				"options": {
+					"notnull": true,
+					"length": 255,
+					"default": ""
+				}
+			},
+			{
+				"name": "wofi_requester",
+				"type": "integer",
+				"options": {
+					"unsigned": true,
+					"notnull": true
+				}
+			},
+			{
+				"name": "wofi_reviewer",
+				"type": "integer",
+				"options": {
+					"unsigned": true,
+					"notnull": true,
+					"default": 0
+				}
+			},
+			{
+				"name": "wofi_status",
+				"type": "binary",
+				"options": {
+					"notnull": true,
+					"length": 16
+				}
+			},
+			{
+				"name": "wofi_stage",
+				"type": "binary",
+				"options": {
+					"notnull": true,
+					"length": 16,
+					"default": ""
+				}
+			},
+			{
+				"name": "wofi_progress",
+				"type": "blob",
+				"options": {
+					"notnull": true,
+					"length": 65530
+				}
+			},
+			{
+				"name": "wofi_info",
+				"type": "blob",
+				"options": {
+					"notnull": true,
+					"length": 65530
+				}
+			},
+			{
+				"name": "wofi_error",
+				"type": "blob",
+				"options": {
+					"notnull": true,
+					"length": 65530
+				}
+			},
+			{
+				"name": "wofi_files_expire",
+				"type": "mwtimestamp",
+				"options": {
+					"notnull": false
+				}
+			},
+			{
+				"name": "wofi_created",
+				"type": "mwtimestamp",
+				"options": {
+					"notnull": true
+				}
+			},
+			{
+				"name": "wofi_updated",
+				"type": "mwtimestamp",
+				"options": {
+					"notnull": true
+				}
+			}
+		],
+		"indexes": [
+			{
+				"name": "wofi_source",
+				"columns": [
+					"wofi_source",
+					"wofi_id"
+				],
+				"unique": false
+			},
+			{
+				"name": "wofi_dbname",
+				"columns": [
+					"wofi_dbname"
+				],
+				"unique": false
+			},
+			{
+				"name": "wofi_status_updated",
+				"columns": [
+					"wofi_status",
+					"wofi_updated"
+				],
+				"unique": false
+			},
+			{
+				"name": "wofi_requester_updated",
+				"columns": [
+					"wofi_requester",
+					"wofi_updated"
+				],
+				"unique": false
+			}
+		],
+		"pk": [
+			"wofi_id"
+		]
 	}
 ]

@@ -1,0 +1,144 @@
+@import 'mediawiki.skin.variables.less';
+
+.wo-fi-card {
+	max-width: 760px;
+	margin-bottom: @spacing-150;
+}
+
+dl.wo-fi-dl {
+	display: grid;
+	grid-template-columns: max-content 1fr;
+	gap: @spacing-25 @spacing-150;
+	max-width: 760px;
+	margin: 0;
+
+	dt {
+		font-weight: @font-weight-bold;
+	}
+
+	dd {
+		margin: 0;
+		overflow-wrap: anywhere;
+	}
+}
+
+.wo-fi-banner {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: @spacing-50 @spacing-75;
+	margin-bottom: @spacing-100;
+
+	p {
+		margin: 0;
+	}
+}
+
+.wo-fi-status {
+	display: inline-block;
+	padding: 0 @spacing-50;
+	border: @border-width-base @border-style-base @border-color-subtle;
+	border-radius: @border-radius-pill;
+	background-color: @background-color-interactive-subtle;
+	color: @color-base;
+	font-size: @font-size-small;
+	font-weight: @font-weight-bold;
+	white-space: nowrap;
+
+	&--done {
+		border-color: @border-color-success;
+		background-color: @background-color-success-subtle;
+		color: @color-success;
+	}
+
+	&--failed,
+	&--declined {
+		border-color: @border-color-error;
+		background-color: @background-color-error-subtle;
+		color: @color-error;
+	}
+
+	&--waiting-dump {
+		border-color: @border-color-warning;
+		background-color: @background-color-warning-subtle;
+	}
+
+	&--running,
+	&--creating,
+	&--queued,
+	&--approved {
+		border-color: @border-color-progressive;
+		background-color: @background-color-progressive-subtle;
+		color: @color-progressive;
+	}
+}
+
+ol.wo-fi-stages {
+	margin: 0 0 0 @spacing-150;
+	padding: 0;
+}
+
+.wo-fi-stage {
+	padding: @spacing-12 0;
+
+	&--done {
+		color: @color-subtle;
+
+		&::after {
+			content: ' ✓';
+			color: @color-success;
+		}
+	}
+
+	&--current {
+		font-weight: @font-weight-bold;
+	}
+
+	&--failed {
+		color: @color-error;
+		font-weight: @font-weight-bold;
+	}
+
+	&--todo {
+		color: @color-placeholder;
+	}
+}
+
+.wo-fi-error,
+.wo-fi-reason {
+	white-space: pre-wrap;
+	overflow-wrap: anywhere;
+}
+
+.wo-fi-reason {
+	max-width: 760px;
+	padding: @spacing-75 @spacing-100;
+	border-left: @border-width-thick @border-style-base @border-color-subtle;
+	background-color: @background-color-neutral-subtle;
+}
+
+.wo-fi-failed-files {
+	margin-top: @spacing-75;
+
+	ul {
+		max-height: 20em;
+		overflow-y: auto;
+	}
+}
+
+.wo-fi-table {
+	width: 100%;
+	max-width: 960px;
+}
+
+.wo-fi-empty {
+	color: @color-subtle;
+}
+
+#wo-fi-approve,
+#wo-fi-decline,
+#wo-fi-retry,
+#wo-fi-discard {
+	max-width: 760px;
+	margin-bottom: @spacing-150;
+}

@@ -139,9 +139,10 @@
 		"GetPreferences": {
 			"handler": "Onboarding"
 		},
-		"LoadExtensionSchemaUpdates": {
-			"handler": "Experiments"
-		},
+		"LoadExtensionSchemaUpdates": [
+			"Experiments",
+			"FandomImportSchema"
+		],
 		"LocalUserCreated": {
 			"handler": "Onboarding"
 		},
@@ -166,6 +167,12 @@
 		},
 		"SpecialPageBeforeExecute": {
 			"handler": "Experiments"
+		},
+		"BeforeCreateEchoEvent": {
+			"handler": "FandomImportNotifications"
+		},
+		"CreateWikiAfterCreationWithExtraData": {
+			"handler": "FandomImport"
 		}
 	},
 	"HookHandlers": {
@@ -228,6 +235,18 @@
 			"optional_services": [
 				"CreateWikiDatabaseUtils"
 			]
+		},
+		"FandomImport": {
+			"class": "WikiOasis\\WikiOasisMagic\\HookHandlers\\FandomImport",
+			"services": [
+				"WikiOasisMagic.FandomImportManager"
+			]
+		},
+		"FandomImportNotifications": {
+			"class": "WikiOasis\\WikiOasisMagic\\HookHandlers\\FandomImportNotifications"
+		},
+		"FandomImportSchema": {
+			"class": "WikiOasis\\WikiOasisMagic\\HookHandlers\\FandomImportSchema"
 		}
 	},
 	"SpecialPages": {
@@ -253,6 +272,15 @@
 				"WikiOasisMagic.ExperimentStateStore",
 				"WikiOasisMagic.ExperimentDataStore",
 				"WikiOasisMagic.WikiFarm"
+			]
+		},
+		"FandomImport": {
+			"class": "WikiOasis\\WikiOasisMagic\\Specials\\SpecialFandomImport",
+			"services": [
+				"WikiOasisMagic.FandomImportManager",
+				"WikiOasisMagic.FandomImportStore",
+				"WikiOasisMagic.FandomClient",
+				"UserFactory"
 			]
 		}
 	},
@@ -302,16 +330,20 @@
 		"experiments-manage"
 	],
 	"LogTypes": [
-		"experiment"
+		"experiment",
+		"fandomimport"
 	],
 	"LogNames": {
-		"experiment": "log-name-experiment"
+		"experiment": "log-name-experiment",
+		"fandomimport": "log-name-fandomimport"
 	},
 	"LogHeaders": {
-		"experiment": "log-description-experiment"
+		"experiment": "log-description-experiment",
+		"fandomimport": "log-description-fandomimport"
 	},
 	"LogActionsHandlers": {
-		"experiment/*": "MediaWiki\\Logging\\LogFormatter"
+		"experiment/*": "MediaWiki\\Logging\\LogFormatter",
+		"fandomimport/*": "MediaWiki\\Logging\\LogFormatter"
 	},
 	"LogRestrictions": {
 		"experiment": "experiments-manage"
@@ -323,6 +355,26 @@
 			],
 			"reset": [
 				"reset"
+			]
+		},
+		"fandomimport": {
+			"request": [
+				"request"
+			],
+			"approve": [
+				"approve"
+			],
+			"decline": [
+				"decline"
+			],
+			"retry": [
+				"retry"
+			],
+			"complete": [
+				"complete"
+			],
+			"fail": [
+				"fail"
 			]
 		}
 	},
@@ -374,10 +426,22 @@
 				240,
 				60
 			]
+		},
+		"wikioasisfandomimport-submit": {
+			"user": [
+				5,
+				86400
+			],
+			"newbie": [
+				2,
+				86400
+			]
 		}
 	},
 	"DefaultUserOptions": {
-		"wikioasismagic-onboarding": ""
+		"wikioasismagic-onboarding": "",
+		"echo-subscriptions-web-fandom-import": true,
+		"echo-subscriptions-email-fandom-import": true
 	},
 	"DatabaseVirtualDomains": [
 		"virtual-wikioasismagic"
@@ -989,6 +1053,59 @@
 		"WikiOasisMagicOnboardingDirectoryUrl": {
 			"description": "String. URL of a directory of wikis. Used while requesting a wiki and by survey cards whose url starts with {directory}; those cards are hidden when this is empty.",
 			"value": ""
+		},
+		"WikiOasisMagicFandomImportEnabled": {
+			"description": "Bool. Special:FandomImport on the central wiki. Needs the wo_fandom_import table there and the import worker (salt: fandom_import) on the job runner host.",
+			"value": false
+		},
+		"WikiOasisMagicFandomImportSpoolDir": {
+			"description": "String. Directory shared with the Fandom import worker on the job runner host; jobs write to its queue/ subdirectory.",
+			"value": "/srv/fandom-import"
+		},
+		"WikiOasisMagicFandomImportLargeFileCount": {
+			"description": "Int. Imports of Fandom wikis with at least this many files must be confirmed by the reviewer: fetching them takes days and disk space on the worker.",
+			"value": 20000
+		},
+		"WikiOasisMagicFandomImportUploadUser": {
+			"description": "String. The system account that imported files are uploaded as on the new wiki.",
+			"value": "Fandom import"
+		},
+		"WikiOasisMagicFandomImportUsernamePrefix": {
+			"description": "String. Interwiki prefix for the authors of imported edits, as in importDump.php --username-prefix. Matches ImportDump's prefix for fandom.com.",
+			"value": "wikia"
+		},
+		"WikiOasisMagicFandomImportPreferFullHistory": {
+			"description": "Bool. Import the Fandom dump with every revision when it can be downloaded, rather than only the current ones.",
+			"value": true
+		},
+		"WikiOasisMagicFandomImportExtensionMap": {
+			"description": "Array. Extensions on a Fandom wiki (by name, as its siteinfo lists them) mapped to the ManageWiki extension turned on for the new wiki.",
+			"value": {
+				"Arrays": "arrays",
+				"CategoryTree": "categorytree",
+				"CharInsert": "charinsert",
+				"Cite": "cite",
+				"CSS": "css",
+				"DPLforum": "dplforum",
+				"DynamicPageList3": "dynamicpagelist4",
+				"EasyTimeline": "timeline",
+				"EmbedVideo": "embedvideo",
+				"ImageMap": "imagemap",
+				"InputBox": "inputbox",
+				"LabeledSectionTransclusion": "labeledsectiontransclusion",
+				"Math": "math",
+				"Poem": "poem",
+				"PortableInfobox": "portableinfobox",
+				"RandomImage": "randomimage",
+				"RandomSelection": "randomselection",
+				"Scribunto": "scribunto",
+				"SyntaxHighlight": "syntaxhighlight_geshi",
+				"Tabber": "tabberneue",
+				"TabberNeue": "tabberneue",
+				"TemplateData": "templatedata",
+				"TemplateStyles": "templatestyles",
+				"Variables": "variables"
+			}
 		}
 	},
 	"ResourceFileModulePaths": {
@@ -1520,6 +1637,11 @@
 				"ext.wikioasismagic.experiments.events",
 				"mediawiki.storage"
 			]
+		},
+		"ext.wikioasismagic.fandomimport.styles": {
+			"styles": [
+				"ext.wikioasismagic.fandomimport.styles/fandomimport.less"
+			]
 		}
 	},
 	"JobClasses": {
@@ -1533,6 +1655,20 @@
 		},
 		"wikiOasisExperimentLog": {
 			"class": "WikiOasis\\WikiOasisMagic\\Jobs\\ExperimentLogJob",
+			"needsPage": false
+		},
+		"wikiOasisFandomImportCreateWiki": {
+			"class": "WikiOasis\\WikiOasisMagic\\Jobs\\FandomImportCreateWikiJob",
+			"services": [
+				"WikiOasisMagic.FandomImportManager"
+			],
+			"needsPage": false
+		},
+		"wikiOasisFandomImportQueue": {
+			"class": "WikiOasis\\WikiOasisMagic\\Jobs\\FandomImportQueueJob",
+			"services": [
+				"WikiOasisMagic.FandomImportManager"
+			],
 			"needsPage": false
 		}
 	},
