@@ -10,6 +10,7 @@ use MediaWiki\Context\IContextSource;
 use MediaWiki\Context\RequestContext;
 use MediaWiki\Deferred\DeferredUpdates;
 use MediaWiki\Hook\EditFilterMergedContentHook;
+use MediaWiki\HookContainer\HookContainer;
 use MediaWiki\Html\Html;
 use MediaWiki\Logger\LoggerFactory;
 use MediaWiki\Logging\ManualLogEntry;
@@ -71,6 +72,7 @@ class Onboarding implements
 		private readonly SurveyLoader $surveyLoader,
 		private readonly UserEditTracker $userEditTracker,
 		private readonly UserFactory $userFactory,
+		private readonly HookContainer $hookContainer,
 	) {
 		$this->logger = LoggerFactory::getInstance( 'WikiOasisMagic' );
 	}
@@ -106,13 +108,7 @@ class Onboarding implements
 			return;
 		}
 
-		$returnQuery = [];
-		foreach ( [ 'returnto', 'returntoquery' ] as $param ) {
-			$value = $request->getRawVal( $param );
-			if ( $value !== null && $value !== '' ) {
-				$returnQuery[$param] = $value;
-			}
-		}
+		$returnQuery = $this->getPreservedParams( $request );
 
 		$out->addBodyClasses( 'wo-signup-v2' );
 		$out->addModuleStyles( 'ext.wikioasismagic.signup.styles' );
@@ -271,7 +267,10 @@ class Onboarding implements
 
 		$welcome = SpecialPage::getTitleFor( 'Welcome' );
 		$target = Title::newFromText( $returnTo );
-		if ( $target && $target->isSpecial( 'Welcome' ) ) {
+		if (
+			$context->getRequest()->getRawVal( 'display' ) === 'popup' ||
+			( $target && ( $target->isSpecial( 'Welcome' ) || $target->isSpecial( 'AuthenticationPopupSuccess' ) ) )
+		) {
 			return false;
 		}
 
@@ -450,6 +449,25 @@ class Onboarding implements
 		if ( $this->isSurveyPage( $page ) ) {
 			$this->surveyLoader->purgePageCache();
 		}
+	}
+
+	/**
+	 * @return array<string,string>
+	 */
+	private function getPreservedParams( WebRequest $request ): array {
+		$params = [];
+		foreach ( [ 'uselang', 'variant', 'display', 'returnto', 'returntoquery', 'returntoanchor' ] as $param ) {
+			$params[$param] = $request->getRawVal( $param );
+		}
+		$this->hookContainer->run( 'AuthPreserveQueryParams', [ &$params, [ 'request' => $request, 'reset' => true ] ] );
+
+		$preserved = [];
+		foreach ( $params as $name => $value ) {
+			if ( $value !== null && $value !== '' ) {
+				$preserved[$name] = $value;
+			}
+		}
+		return $preserved;
 	}
 
 	private function isPreviewingSignup( WebRequest $request ): bool {

@@ -4,6 +4,7 @@ namespace WikiOasis\WikiOasisMagic\HookHandlers;
 
 use MediaWiki\Api\ApiBase;
 use MediaWiki\Api\Hook\ApiCheckCanExecuteHook;
+use MediaWiki\Auth\Hook\AuthPreserveQueryParamsHook;
 use MediaWiki\ChangeTags\Hook\ChangeTagsAfterUpdateTagsHook;
 use MediaWiki\Installer\DatabaseUpdater;
 use MediaWiki\Installer\Hook\LoadExtensionSchemaUpdatesHook;
@@ -17,6 +18,7 @@ use Miraheze\ManageWiki\Helpers\Factories\ModuleFactory;
 use Psr\Log\LoggerInterface;
 use Throwable;
 use WikiOasis\WikiOasisMagic\Experiments\ExperimentDataStore;
+use WikiOasis\WikiOasisMagic\Experiments\ExperimentManager;
 use WikiOasis\WikiOasisMagic\Experiments\ExperimentStateStore;
 use WikiOasis\WikiOasisMagic\Experiments\ExperimentTracker;
 use WikiOasis\WikiOasisMagic\Experiments\WikiRollout;
@@ -24,6 +26,7 @@ use function dirname;
 
 class Experiments implements
 	ApiCheckCanExecuteHook,
+	AuthPreserveQueryParamsHook,
 	ChangeTagsAfterUpdateTagsHook,
 	LoadExtensionSchemaUpdatesHook,
 	PageSaveCompleteHook,
@@ -37,6 +40,18 @@ class Experiments implements
 		private readonly WikiRollout $rollout,
 	) {
 		$this->logger = LoggerFactory::getInstance( 'WikiOasisMagic' );
+	}
+
+	/**
+	 * @param array &$params
+	 * @param array $options
+	 */
+	public function onAuthPreserveQueryParams( array &$params, array $options ) {
+		$request = $options['request'];
+		$params += [
+			ExperimentManager::OVERRIDE_PARAM => $request->getRawVal( ExperimentManager::OVERRIDE_PARAM ),
+			ExperimentManager::OVERRIDE_TOKEN_PARAM => $request->getRawVal( ExperimentManager::OVERRIDE_TOKEN_PARAM ),
+		];
 	}
 
 	public static function onExtensionFunction(): void {

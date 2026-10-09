@@ -156,6 +156,9 @@
 		"ApiCheckCanExecute": {
 			"handler": "Experiments"
 		},
+		"AuthPreserveQueryParams": {
+			"handler": "Experiments"
+		},
 		"ChangeTagsAfterUpdateTags": {
 			"handler": "Experiments"
 		},
@@ -194,7 +197,8 @@
 				"WikiOasisMagic.OnboardingMetrics",
 				"WikiOasisMagic.OnboardingSurveyLoader",
 				"UserEditTracker",
-				"UserFactory"
+				"UserFactory",
+				"HookContainer"
 			]
 		},
 		"Experiments": {
