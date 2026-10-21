@@ -1148,6 +1148,9 @@
 		"ext.wikioasismagic.simpleBlogPageFix": {
 			"scripts": [
 				"ext.wikioasismagic.simpleBlogPageFix.js"
+			],
+			"dependencies": [
+				"ext.oOJSPlus.data"
 			]
 		},
 		"ext.wikioasismagic.codex.styles": {
