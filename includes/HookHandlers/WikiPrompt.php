@@ -98,11 +98,15 @@ class WikiPrompt implements BeforePageDisplayHook {
 		}
 
 		$title = $out->getTitle();
-		if ( !$title || !$title->canExist() || $out->getActionName() !== 'view' || $out->isPrintable() ) {
+		if ( !$title || !$title->canExist() || $out->getActionName() !== 'view' ) {
 			return false;
 		}
 
 		$request = $out->getRequest();
+		// OutputPage::isPrintable() is deprecated in 1.47; this is how 1.46 sets it
+		if ( $request->getRawVal( 'printable' ) === 'yes' ) {
+			return false;
+		}
 		foreach ( [ 'diff', 'veaction', 'redirect' ] as $param ) {
 			if ( $request->getRawVal( $param ) !== null ) {
 				return false;

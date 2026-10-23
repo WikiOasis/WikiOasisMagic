@@ -450,13 +450,14 @@ class UpgradeWiki extends Maintenance {
 					continue;
 				}
 
+				$buffer = $child['buffers'][$fd] ?? '';
 				$chunk = fread( $pipe, 65536 );
 				if ( $chunk !== false && $chunk !== '' ) {
-					$child['buffers'][$fd] .= $chunk;
+					$buffer .= $chunk;
 				}
 
 				$eof = feof( $pipe );
-				$lines = explode( "\n", $child['buffers'][$fd] );
+				$lines = explode( "\n", $buffer );
 				$child['buffers'][$fd] = $eof ? '' : array_pop( $lines );
 
 				foreach ( $lines as $line ) {

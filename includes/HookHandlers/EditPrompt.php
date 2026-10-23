@@ -34,7 +34,8 @@ class EditPrompt implements BeforePageDisplayHook {
 		$request = $out->getRequest();
 		return $out->getActionName() === 'view' &&
 			$out->isArticle() &&
-			!$out->isPrintable() &&
+			// OutputPage::isPrintable() is deprecated in 1.47; this is how 1.46 sets it
+			$request->getRawVal( 'printable' ) !== 'yes' &&
 			$out->isRevisionCurrent() &&
 			$request->getRawVal( 'diff' ) === null &&
 			$request->getRawVal( 'oldid' ) === null;

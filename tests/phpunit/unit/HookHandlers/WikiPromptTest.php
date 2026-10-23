@@ -48,7 +48,6 @@ class WikiPromptTest extends MediaWikiUnitTestCase {
 		'bot' => false,
 		'canExist' => true,
 		'action' => 'view',
-		'printable' => false,
 		'params' => [],
 		'registration' => '20250101000000',
 		'available' => true,
@@ -169,7 +168,6 @@ class WikiPromptTest extends MediaWikiUnitTestCase {
 		$out->method( 'getUser' )->willReturn( $user );
 		$out->method( 'getTitle' )->willReturn( $title );
 		$out->method( 'getActionName' )->willReturn( $options['action'] );
-		$out->method( 'isPrintable' )->willReturn( $options['printable'] );
 		$out->method( 'getRequest' )->willReturn( $request );
 		$out->method( 'addModules' )->willReturnCallback( function ( $modules ) {
 			$this->modules = array_merge( $this->modules, (array)$modules );
@@ -308,7 +306,7 @@ class WikiPromptTest extends MediaWikiUnitTestCase {
 			'special page' => [ [ 'canExist' => false ] ],
 			'editing' => [ [ 'action' => 'edit' ] ],
 			'history' => [ [ 'action' => 'history' ] ],
-			'printable' => [ [ 'printable' => true ] ],
+			'printable' => [ [ 'params' => [ 'printable' => 'yes' ] ] ],
 			'diff' => [ [ 'params' => [ 'diff' => 'prev' ] ] ],
 			'visual editor' => [ [ 'params' => [ 'veaction' => 'edit' ] ] ],
 			'redirect' => [ [ 'params' => [ 'redirect' => 'no' ] ] ],

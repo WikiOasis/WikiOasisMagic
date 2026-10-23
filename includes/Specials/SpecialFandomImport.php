@@ -647,9 +647,9 @@ class SpecialFandomImport extends SpecialPage {
 			if ( is_array( $list ) && $list ) {
 				$names = [];
 				foreach ( $list as $item ) {
-					$names[] = is_array( $item ) ? (string)( $item['name'] ?? '' ) : (string)$item;
+					$names[] = htmlspecialchars( is_array( $item ) ? (string)( $item['name'] ?? '' ) : (string)$item );
 				}
-				$rows[$label] = htmlspecialchars( $lang->commaList( $names ) );
+				$rows[$label] = $lang->commaList( $names );
 			}
 		}
 
@@ -657,9 +657,9 @@ class SpecialFandomImport extends SpecialPage {
 		if ( is_array( $skipped ) && $skipped ) {
 			$parts = [];
 			foreach ( $skipped as $ns => $count ) {
-				$parts[] = $this->msg( 'wikioasismagic-fandomimport-progress-skipped-ns', $ns )->numParams( $count )->text();
+				$parts[] = $this->msg( 'wikioasismagic-fandomimport-progress-skipped-ns', $ns )->numParams( $count )->escaped();
 			}
-			$rows['wikioasismagic-fandomimport-progress-skipped-namespaces'] = htmlspecialchars( $lang->commaList( $parts ) );
+			$rows['wikioasismagic-fandomimport-progress-skipped-namespaces'] = $lang->commaList( $parts );
 		}
 
 		if ( $request->status !== FandomImportStatus::FAILED && $request->filesExpire === null &&
