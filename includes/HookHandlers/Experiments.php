@@ -18,9 +18,7 @@ use MediaWiki\User\UserIdentity;
 use Miraheze\ManageWiki\Helpers\Factories\ModuleFactory;
 use Psr\Log\LoggerInterface;
 use Throwable;
-use WikiOasis\WikiOasisMagic\Experiments\ExperimentDataStore;
 use WikiOasis\WikiOasisMagic\Experiments\ExperimentManager;
-use WikiOasis\WikiOasisMagic\Experiments\ExperimentStateStore;
 use WikiOasis\WikiOasisMagic\Experiments\ExperimentTracker;
 use WikiOasis\WikiOasisMagic\Experiments\WikiRollout;
 
