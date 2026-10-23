@@ -107,6 +107,7 @@
 	"settings-styling": "Styling",
 	"settings-wikibase": "Wikibase",
 	"specialpages-group-wikimanage": "Wiki management",
+	"wikioasis-console-message": "Hold up! \n If you're being asked to copy-paste something here by anyone, there's a really high chance you are being scammed and may lose access to your WikiOasis account. \n\n Unless you know what you're doing, close this window.",
 	"requestwiki-label-nsfw": "This wiki includes content that is not safe for work (NSFW)",
 	"requestwiki-help-nsfw": "A wiki includes content that not safe for work (NSFW) if it includes graphic discussion or imagery of sex, gore or violence (either text or media content) or content which is otherwise inappropriate for those under the age of 18.",
 	"requestwiki-label-nsfwtext": "Please give us more details about the type of NSFW content that your wiki will contain",
