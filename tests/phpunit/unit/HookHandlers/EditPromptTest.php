@@ -28,7 +28,6 @@ class EditPromptTest extends MediaWikiUnitTestCase {
 	private const DEFAULTS = [
 		'action' => 'view',
 		'article' => true,
-		'printable' => false,
 		'current' => true,
 		'query' => [],
 		'content' => true,
@@ -131,7 +130,6 @@ class EditPromptTest extends MediaWikiUnitTestCase {
 		$out->method( 'getUser' )->willReturn( $parts['user'] );
 		$out->method( 'getActionName' )->willReturn( $o['action'] );
 		$out->method( 'isArticle' )->willReturn( $o['article'] );
-		$out->method( 'isPrintable' )->willReturn( $o['printable'] );
 		$out->method( 'isRevisionCurrent' )->willReturn( $o['current'] );
 		$out->method( 'addModules' )->willReturnCallback( static function ( $modules ) use ( &$result ) {
 			$result['modules'] = array_merge( $result['modules'], (array)$modules );
@@ -246,7 +244,7 @@ class EditPromptTest extends MediaWikiUnitTestCase {
 			'edit action' => [ [ 'action' => 'edit' ] ],
 			'history action' => [ [ 'action' => 'history' ] ],
 			'not an article view' => [ [ 'article' => false ] ],
-			'printable' => [ [ 'printable' => true ] ],
+			'printable' => [ [ 'query' => [ 'printable' => 'yes' ] ] ],
 			'old revision' => [ [ 'current' => false ] ],
 			'diff' => [ [ 'query' => [ 'diff' => 'prev' ] ] ],
 			'oldid' => [ [ 'query' => [ 'oldid' => '12' ] ] ],
