@@ -227,7 +227,7 @@ class FandomImportPrepare extends Maintenance {
 
 		$lines = explode( "\n", trim( $result->getStdout() ) );
 		$data = json_decode( (string)end( $lines ), true );
-		if ( $result->getExitCode() !== 0 || !is_array( $data['namespaces'] ?? null ) ) {
+		if ( $result->getExitCode() !== 0 || !is_array( $data ) || !is_array( $data['namespaces'] ?? null ) ) {
 			$this->warnings[] = 'Could not list the namespaces in a new process; extensions just enabled ' .
 				'may have namespaces whose pages are left out. ' . trim( $result->getStderr() );
 			return $this->getNamespaces();

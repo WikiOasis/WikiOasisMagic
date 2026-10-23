@@ -18,6 +18,7 @@ use Miraheze\CreateWiki\ConfigNames as CreateWikiConfigNames;
 use Miraheze\CreateWiki\Services\CreateWikiValidator;
 use Miraheze\CreateWiki\Services\WikiManagerFactory;
 use Psr\Log\LoggerInterface;
+use RuntimeException;
 use StatusValue;
 use Throwable;
 use Wikimedia\Message\MessageSpecifier;
@@ -652,7 +653,11 @@ class FandomImportManager {
 	): void {
 		try {
 			$entry = new ManualLogEntry( 'fandomimport', $action );
-			$entry->setPerformer( $performer ?? User::newSystemUser( User::MAINTENANCE_SCRIPT_USER, [ 'steal' => true ] ) );
+			$performer ??= User::newSystemUser( User::MAINTENANCE_SCRIPT_USER, [ 'steal' => true ] );
+			if ( !$performer ) {
+				throw new RuntimeException( 'Could not get the maintenance script user' );
+			}
+			$entry->setPerformer( $performer );
 			$entry->setTarget( SpecialPage::getTitleFor( 'FandomImport', $request->source->getSubpage() ) );
 			$entry->setComment( mb_substr( $comment, 0, 500 ) );
 			$entry->setParameters( [
