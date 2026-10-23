@@ -4,6 +4,7 @@ namespace WikiOasis\WikiOasisMagic\Experiments;
 
 use MediaWiki\Json\FormatJson;
 use Psr\Log\LoggerInterface;
+use RuntimeException;
 use Wikimedia\ObjectCache\WANObjectCache;
 use Wikimedia\Rdbms\DBError;
 use Wikimedia\Rdbms\IConnectionProvider;
@@ -44,7 +45,7 @@ class ExperimentStateStore {
 			$this->getCacheKey(),
 			self::CACHE_TTL,
 			function ( $old, &$ttl ) {
-				$rows = $this->load( $this->connectionProvider->getReplicaDatabase( self::VIRTUAL_DOMAIN ) );
+				$rows = $this->loadFromReplica();
 				if ( $rows === null ) {
 					$ttl = WANObjectCache::TTL_MINUTE;
 					return [ 'available' => false, 'rows' => [] ];
@@ -133,6 +134,23 @@ class ExperimentStateStore {
 		);
 		$this->available = $rows !== null;
 		$this->rows = $rows ?? [];
+	}
+
+	/** @return array<string,array>|null */
+	private function loadFromReplica(): ?array {
+		try {
+			$db = $this->connectionProvider->getReplicaDatabase( self::VIRTUAL_DOMAIN );
+		} catch ( RuntimeException $e ) {
+			// DBError, or a plain RuntimeException when the database backend is
+			// disabled (e.g. PHPUnit tests outside the Database group)
+			$this->logger->warning(
+				'Experiment state is unavailable, using configuration only: {message}',
+				[ 'message' => $e->getMessage(), 'exception' => $e ]
+			);
+			return null;
+		}
+
+		return $this->load( $db );
 	}
 
 	/** @return array<string,array>|null */
