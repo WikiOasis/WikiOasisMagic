@@ -1886,6 +1886,14 @@
 				"wikioasismagic-fandomimport-unknown",
 				"wikioasismagic-fandomimport-waiting-dump-help"
 			]
+		},
+		"ext.wikioasismagic.consoleMessage": {
+			"packageFiles": [
+				"ext.wikioasismagic.consoleMessage.js"
+			],
+			"messages": [
+				"wikioasis-console-message"
+			]
 		}
 	},
 	"JobClasses": {

@@ -415,6 +415,8 @@ class Main implements
 	 * @param Skin $skin
 	 */
 	public function onBeforePageDisplay( $out, $skin ): void {
+		$out->addModules( 'ext.wikioasismagic.consoleMessage' );
+
 		if ( MediaWikiServices::getInstance()
 			->getExtensionRegistry()
 			->isLoaded( 'SimpleBlogPage' )
