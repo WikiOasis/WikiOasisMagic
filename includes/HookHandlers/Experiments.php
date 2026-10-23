@@ -7,8 +7,6 @@ use MediaWiki\Api\Hook\ApiCheckCanExecuteHook;
 use MediaWiki\Auth\Hook\AuthPreserveQueryParamsHook;
 use MediaWiki\ChangeTags\Hook\ChangeTagsAfterUpdateTagsHook;
 use MediaWiki\Context\RequestContext;
-use MediaWiki\Installer\DatabaseUpdater;
-use MediaWiki\Installer\Hook\LoadExtensionSchemaUpdatesHook;
 use MediaWiki\Logger\LoggerFactory;
 use MediaWiki\Logging\ManualLogEntry;
 use MediaWiki\MediaWikiServices;
@@ -25,13 +23,11 @@ use WikiOasis\WikiOasisMagic\Experiments\ExperimentManager;
 use WikiOasis\WikiOasisMagic\Experiments\ExperimentStateStore;
 use WikiOasis\WikiOasisMagic\Experiments\ExperimentTracker;
 use WikiOasis\WikiOasisMagic\Experiments\WikiRollout;
-use function dirname;
 
 class Experiments implements
 	ApiCheckCanExecuteHook,
 	AuthPreserveQueryParamsHook,
 	ChangeTagsAfterUpdateTagsHook,
-	LoadExtensionSchemaUpdatesHook,
 	PageSaveCompleteHook,
 	SpecialPageBeforeExecuteHook
 {
@@ -155,26 +151,4 @@ class Experiments implements
 		return $request->getSession()->getUser()->getName() === $performer->getName() ? $request : null;
 	}
 
-	/**
-	 * @param DatabaseUpdater $updater
-	 */
-	public function onLoadExtensionSchemaUpdates( $updater ) {
-		$dir = dirname( __DIR__, 2 ) . '/sql/' . $updater->getDB()->getType();
-		foreach ( [
-			'wo_experiment_state',
-			ExperimentDataStore::UNIT_TABLE,
-			ExperimentDataStore::EVENT_TABLE,
-			ExperimentDataStore::DAILY_TABLE,
-			ExperimentDataStore::EXTENSION_TABLE,
-			ExperimentDataStore::SYNC_TABLE,
-		] as $table ) {
-			$updater->addExtensionUpdateOnVirtualDomain( [
-				ExperimentStateStore::VIRTUAL_DOMAIN,
-				'addTable',
-				$table,
-				"$dir/$table.sql",
-				true,
-			] );
-		}
-	}
 }

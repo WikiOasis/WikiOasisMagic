@@ -140,7 +140,7 @@
 			"handler": "Onboarding"
 		},
 		"LoadExtensionSchemaUpdates": [
-			"Experiments",
+			"ExperimentsSchema",
 			"FandomImportSchema"
 		],
 		"LocalUserCreated": {
@@ -244,6 +244,9 @@
 		},
 		"FandomImportNotifications": {
 			"class": "WikiOasis\\WikiOasisMagic\\HookHandlers\\FandomImportNotifications"
+		},
+		"ExperimentsSchema": {
+			"class": "WikiOasis\\WikiOasisMagic\\HookHandlers\\ExperimentsSchema"
 		},
 		"FandomImportSchema": {
 			"class": "WikiOasis\\WikiOasisMagic\\HookHandlers\\FandomImportSchema"
