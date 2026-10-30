@@ -5,6 +5,7 @@ namespace WikiOasis\WikiOasisMagic\JobQueue;
 use MediaWiki\JobQueue\IJobSpecification;
 use MediaWiki\JobQueue\JobQueueRedis;
 use MediaWiki\JobQueue\RunnableJob;
+use MediaWiki\MediaWikiServices;
 use Sentry\SentrySdk;
 use Sentry\Tracing\Span;
 use Sentry\Tracing\SpanContext;
@@ -213,6 +214,7 @@ class JobQueueSentryRedis extends JobQueueRedis {
 	 */
 	protected function doAck( RunnableJob $job ) {
 		$res = parent::doAck( $job );
+		$this->recordCompletionLatency( $job );
 
 		if ( self::$pendingProcessTransaction !== null
 			&& (string)$job->getMetadata( 'uuid' ) === self::$pendingProcessUuid
@@ -223,6 +225,17 @@ class JobQueueSentryRedis extends JobQueueRedis {
 		}
 
 		return $res;
+	}
+
+	private function recordCompletionLatency( RunnableJob $job ): void {
+		$readyTs = $job->getReadyTimestamp();
+		if ( !$readyTs ) {
+			return;
+		}
+		MediaWikiServices::getInstance()->getStatsFactory()
+			->getTiming( 'jobqueue_completion_seconds' )
+			->setLabel( 'jobtype', $job->getType() )
+			->observeSeconds( max( 0, microtime( true ) - $readyTs ) );
 	}
 
 	/**
